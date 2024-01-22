@@ -1,0 +1,230 @@
+:root {
+    /* Light Mode Colors */
+    --primary-bg: #e0f7fa; /* Light Blue */
+    --secondary-bg: #fff;   /* White */
+    --text-color: #333;     /* Dark Gray */
+    --link-color: #00796b;  /* Teal */
+    --button-bg: #4caf50;   /* Green */
+    --button-text: #fff;    /* White */
+    --input-border: #ccc;   /* Light Gray */
+    --user-color: #b0d7f7;   
+    --bot-color: #6ec471;   
+
+    /* Dark Mode Colors */
+    --dark-primary-bg: #37474f; /* Darker Blue */
+    --dark-secondary-bg: #263238; /* Darker Gray */
+    --dark-text-color: #eceff1; /* Lighter Gray */
+    --dark-link-color: #80cbc4; /* Lighter Teal */
+    --dark-button-bg: #388e3c; /* Darker Green */
+    --dark-button-text: #fff; /* White */
+    --dark-input-border: #546e7a; /* Darker Gray */
+    --dark-user-color: #64b5f6;   
+    --dark-bot-color: #81c784;    
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--primary-bg);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.top-bar {
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    width: 100%;
+    z-index: 1;
+    transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    justify-content: space-between; /* Add this line to move buttons to the right */
+    align-items: center;
+}
+
+.top-bar button, .top-bar a {
+    margin-left: auto; /* Add this line to move buttons to the right */
+}
+.top-bar a {
+    color: var(--link-color);
+    text-decoration: none;
+    margin-left: 10px;
+    margin-right: 20px;
+    cursor: pointer;
+}
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    margin-top: 0px; /* Adjust as needed to create space for the fixed top bar */
+    margin-bottom: 0px; /* Adjust as needed to create space for the fixed bottom input bar */
+}
+
+.chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.chat-input {
+    padding: 10px;
+    border-top: 1px solid var(--input-border);
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--secondary-bg);
+    z-index: 1;
+    transition: background-color 0.3s;
+    text-align: center;
+}
+
+.message {
+    margin-bottom: 10px;
+}
+
+.timestamp {
+    font-size: 12px;
+    color: #888;
+}
+
+.user, .bot {
+    background-color: var(--user-color);
+    color: var(--text-color);
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.bot {
+    background-color: var(--bot-color);
+}
+
+input {
+    padding: 8px;
+    width: 70%;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+}
+
+button {
+    padding: 8px;
+    margin-left: 10px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* The switch - the box around the slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+  }
+  
+  /* Hide default HTML checkbox */
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  /* The slider */
+  /* .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+  
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+  
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+  
+  input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+  }
+  
+  input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+  }
+  .slider.round {
+    border-radius: 34px;
+  }
+  
+  .slider.round:before {
+    border-radius: 50%;
+  } 
+  */
+
+/* Light Mode */
+/* body.light-mode {
+    background-color: var(--primary-bg);
+    color: var(--text-color);
+}
+
+.top-bar.light-mode {
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
+} */
+
+/* Dark Mode */
+body.dark-mode {
+    background-color: var(--dark-primary-bg);
+    color: var(--dark-text-color);
+}
+
+.top-bar.dark-mode {
+    background-color: var(--dark-secondary-bg);
+    color: var(--dark-text-color);
+}
+
+.user.dark-mode, .bot.dark-mode {
+    background-color: var(--dark-user-color);
+    color: var(--dark-text-color);
+}
+
+.bot.dark-mode {
+    background-color: var(--dark-bot-color);
+}
+
+.top-bar a.dark-mode {
+    color: var(--dark-link-color);
+}
+
+.chat-input.dark-mode {
+    background-color: var(--dark-secondary-bg);
+    border-top: 1px solid var(--dark-input-border);
+}
+
+button.dark-mode {
+    background-color: var(--dark-button-bg);
+    color: var(--dark-button-text);
+}
