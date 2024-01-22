@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Chatbot App</title>
+</head>
+<body>
+    <div class="top-bar">
+        <span class="chatbot-name">{{ chatbot_name }}</span>
+        
+        <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        <a href="/clear_history">Clear History</a>
+        <!-- <label class="switch">
+            <input type="checkbox" onclick="toggleDarkMode()">
+            <span class="slider round"></span>
+        </label> -->
+    </div>
+
+    <div class="chat-container" id="chat-container">
+        <div class="chat-history" id="chat-history">
+            {% for message in messages[::-1] %}
+                <div class="message">
+                    <span class="timestamp">{{ message[3] }}</span>
+                    <p class="user">{{ message[1] }}</p>
+                    <p class="bot">{{ message[2] }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="chat-input">
+        <form action="/send_message" method="post" onsubmit="return handleFormSubmit();" style="align-items: center; display: flex; justify-content: center;">
+            <!-- <input type="text" name="user_message" placeholder="Type your message..."> -->
+            <textarea name="user_message" placeholder="Type your message..." rows="3" style="width: 70%;"></textarea>
+            <button type="submit">Send</button>
+        </form>
+    </div>
+</body>
+
+<script>
+    // document.body.classList.value = localStorage.getItem('mode') || 'light-mode';
+
+    function handleFormSubmit() {
+        const userInput = document.querySelector('textarea[name="user_message"]');
+        const userMessage = userInput.value.trim();
+
+        // Check if Shift key is pressed and Enter key is not pressed
+        if (event.shiftKey && event.keyCode === 13) {
+            // Add a newline instead of submitting the form
+            userInput.value += '\n';
+        } else if (userMessage !== '') {
+            // Submit the form if Enter key is pressed without Shift
+            return true;
+        }
+
+        // Prevent the form from submitting
+        event.preventDefault();
+        return false;
+    }
+
+    
+    // EVENT LISTENERS
+    function toggleDarkMode() {
+        // toggle between dark mode and light mode
+        document.body.classList.toggle('dark-mode');
+        // document.body.classList.toggle('dark-mode', document.body.classList.value == 'light-mode');
+        // document.body.classList.toggle('light-mode', document.body.classList.value == '');
+        // console.log(document.body.classList.value);
+    }
+
+    function setChatContainerHeight() {
+        const windowHeight = window.innerHeight;
+        const topBarHeight = document.querySelector('.top-bar').offsetHeight;
+        const chatInputHeight = document.querySelector('.chat-input').offsetHeight;
+
+        const chatContainer = document.getElementById('chat-container');
+        const chatContainerHeight = windowHeight - topBarHeight - chatInputHeight;
+
+        chatContainer.style.marginTop = `${topBarHeight}px`;
+        chatContainer.style.height = `${chatContainerHeight}px`;
+    }
+
+    function scrollToBottom() {
+        const chatHistory = document.getElementById('chat-history');
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    window.addEventListener('resize', setChatContainerHeight);
+    document.addEventListener('DOMContentLoaded', () => {
+        // when the HTML document has been completely loaded and parsed
+        setChatContainerHeight();
+    });
+    window.addEventListener('load', () => { 
+        // when all resources on the page (including images, stylesheets, scripts, etc.) have finished loading
+        scrollToBottom();
+    });
+</script>
+
+</html>
