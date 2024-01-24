@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect
 import sqlite3
 from datetime import datetime
-from azure_endpoint_test import callLLM
+from llm_local import callLLM
 
 app = Flask(__name__)
 
@@ -37,7 +37,7 @@ def index():
 @app.route('/send_message', methods=['POST'])
 def send_message():
     user_message = request.form.get('user_message')
-    
+    print('user_message '+user_message)
     # call LLM for response
     response = callLLM(user_message)
 
@@ -45,7 +45,7 @@ def send_message():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('INSERT INTO messages (user_message, bot_message) VALUES (?, ?)',
-                   (user_message, response))
+                (user_message, response))
     conn.commit()
     
     # # Fetch the new message

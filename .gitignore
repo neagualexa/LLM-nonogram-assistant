@@ -34,3 +34,7 @@ db.sqlite3
 
 # Static files
 staticfiles/
+
+# Models GGUF folder
+models/*
+LLM_calls/*

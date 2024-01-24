@@ -3,8 +3,8 @@ import json
 import os
 import ssl
 
-API_URL = "https://fyp-workspace-dialogpt.eastus2.inference.ml.azure.com/score"
-MODEL = 'msft-dialogpt-medium-13'
+API_URL = "https://fyp-workspace-cudzg.eastus2.inference.ml.azure.com/score"
+MODEL =  'llama-2-7b-chat-16'
 API_TOKEN = ""
 
 def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
@@ -21,15 +21,22 @@ def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
     # depending on the format your endpoint expects.
     # More information can be found here:
     # https://docs.microsoft.com/azure/machine-learning/how-to-deploy-advanced-entry-script
-
     data = {
-	"inputs": {
-		"past_user_inputs": past_user_inputs,
-		"generated_responses": generated_responses,
-		"text": user_message
+        "input_data": {
+            "input_string": [
+            {
+                "role": "user",
+                "content": user_message
+            }
+            ],
+            "parameters": {
+            "temperature": 0.6,
+            "top_p": 0.9,
+            "do_sample": "true",
+            "max_new_tokens": 200
+            }
         }
-    }
-
+        }
 
     body = str.encode(json.dumps(data))
 
@@ -50,9 +57,8 @@ def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
 
         result = response.read()
         print(result)
-        # return the generated_text out of the byte array
         result = json.loads(result)
-        return result['generated_text']
+        return result['output']
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 

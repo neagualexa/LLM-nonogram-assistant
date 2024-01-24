@@ -1,7 +1,7 @@
 import requests
 
-API_TOKEN = "gP2CVXklJFBVazLlSQ4M1t0lhIdEZM5w"
-API_URL = "https://fyp-workspace-dialogpt.eastus2.inference.ml.azure.com/score"
+API_TOKEN = ""
+API_URL = "https://fyp-workspace-cudzg.eastus2.inference.ml.azure.com/score"
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
 
 def query(payload):
