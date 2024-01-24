@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect
 import sqlite3
 from datetime import datetime
-from llm_local import callLLM
+from huggingface_inference import query as callLLM
 
 app = Flask(__name__)
 

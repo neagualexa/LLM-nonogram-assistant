@@ -37,4 +37,4 @@ staticfiles/
 
 # Models GGUF folder
 models/*
-LLM_calls/*
+azure/LLM_calls/*

@@ -1,4 +1,5 @@
 from gpt4all import GPT4All
+import time
 
 model_name = 'llama-2-7b-chat.Q4_0.gguf'
 model_path = './models/' 
@@ -10,10 +11,13 @@ system_template = 'You are a helpful instructor and assistant.'
 prompt_template = 'USER: {0}\nASSISTANT: '
         
 def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
-    
+    start_time = time.time()
     prompts = [user_message]
     first_input = system_template + prompt_template.format(prompts[0])
     response = model.generate(first_input, temp=0, max_tokens=100)
+    end_time = time.time()
+    latency = end_time - start_time
+    print(f"Latency: {latency} seconds")
     print(response)
     return response
     # for prompt in prompts[1:]:
