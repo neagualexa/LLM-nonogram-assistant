@@ -38,3 +38,7 @@ staticfiles/
 # Models GGUF folder
 models/*
 azure/LLM_calls/*
+
+# Kniowledge base materials
+materials/*
+index/*
