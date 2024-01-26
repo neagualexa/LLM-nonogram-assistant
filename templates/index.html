@@ -31,6 +31,7 @@
     </div>
     <div class="chat-input">
         <form action="/send_message" method="post" onsubmit="return handleFormSubmit();" style="align-items: center; display: flex; justify-content: center;">
+            <div id="loading-spinner" class="hidden"></div>
             <input type="text" name="user_message" placeholder="Type your message...">
             <!-- <textarea name="user_message" placeholder="Type your message..." rows="3" style="width: 70%;"></textarea> -->
             <button type="submit">Send</button>
@@ -40,6 +41,45 @@
 
 <script>
     // document.body.classList.value = localStorage.getItem('mode') || 'light-mode';
+
+    async function handleFormLoading() {
+        const userInput = document.querySelector('input[name="user_message"]');
+        const userMessage = userInput.value.trim();
+
+        if (event.shiftKey && event.keyCode === 13) {
+            userInput.value += '\n';
+        } else if (userMessage !== '') {
+            const loadingSpinner = document.getElementById('loading-spinner');
+            loadingSpinner.classList.remove('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('user_message', userMessage);
+
+                const response = await fetch('/send_message', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.text();
+                    console.log(data);
+                    // Handle the response as needed
+
+                    // Hide the loading spinner when the response is received
+                    loadingSpinner.classList.add('hidden');
+                } else {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                // Handle errors if needed
+
+                // Hide the loading spinner in case of an error
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+    }
 
     function handleFormSubmit() {
         const userInput = document.querySelector('textarea[name="user_message"]');
@@ -51,6 +91,7 @@
             userInput.value += '\n';
         } else if (userMessage !== '') {
             // Submit the form if Enter key is pressed without Shift
+            handleFormLoading();
             return true;
         }
 

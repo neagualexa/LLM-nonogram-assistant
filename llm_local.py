@@ -108,7 +108,16 @@ llm = GPT4All(model=local_path, callbacks=callbacks, verbose=True)
 prompt = ChatPromptTemplate.from_messages(
     [
         SystemMessage(
-            content="You are a chatbot having a conversation with a human."
+            content="""You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
+            The user can describe the puzzle or ask for specific tips, and you will guide them through the solving process.
+            
+            At the beginning of a conversation in your first message, introduce yourself. Also engage in some casual small talk, like answering greetings and simple questions like "How/Who are you?"! 
+            Always start with ASSISTANT: when responding to the question. DO NOT generate a USER message/question.
+            ONLY answer the user's questions regarding Nonograms. If you do not know how to answer, reply by saying you do not know. Do not reply to any irrelevant questions."""
+            # content="""You are a helpful instructor and assistant chatbot. 
+            # Never continue the user's sentence or prompt. Do not correct the user's punctuation or spelling.
+            # If the human user asks similar questions as "Hi!", "How are you?", "What is your name?", "What are you?" or other variations, you can answer.
+            # ONLY answer the user's questions regarding Nonograms. If you do not know how to answer, reply by saying you do not know. Do not reply to any irrelevant questions."""
         ),  # The persistent system prompt
         MessagesPlaceholder(
             variable_name="chat_history"
@@ -119,7 +128,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, ai_prefix="ASSISTANT:")
 
 # 1
 llm_chain = LLMChain(prompt=prompt, llm=llm, verbose=True, memory=memory)
@@ -144,19 +153,58 @@ llm_chain = LLMChain(prompt=prompt, llm=llm, verbose=True, memory=memory)
 def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
     start_time = time.time()
     
+    # 0. TEST
+    # response = "test"
     # 1
     response = llm_chain.predict(human_input=user_message)
+    # Print each word as it is generated
+    start_markers = ["CHATBOT:", "Bot:", "AI:", "ASSISTANT:"]
+    end_markers = ["USER:", "HUMAN:"]
+    extracted_section = response
+
+    for start_marker in start_markers:
+        start_index = extracted_section.lower().find(start_marker.lower())
+        if start_index != -1:
+            extracted_section = extracted_section[start_index + len(start_marker):]
+            break
+        
+    if extracted_section:
+        start_index = 0
+        start_index = ""
+        
+    for end_marker in end_markers:
+        end_index = extracted_section.lower().find(end_marker.lower())
+        if end_index != -1:
+            extracted_section = extracted_section[:end_index]
+            break
+
+    # If none of the markers are found, use the entire response
+    if extracted_section is None:
+        extracted_section = response
+    else:
+        response = extracted_section
+
+    # 3. Print the extracted section
+    print("-------")
+    print("extracted response: ", extracted_section)
+    print("-------")
     # 2
     # response = conv_retr_chain.invoke(user_message)
     # 3
     # response = retrieval_chain.invoke({"input": user_message, "chat_history": memory.chat_memory.messages}) # memory is empty -> not reliant
-    
+    if llm_chain.memory.chat_memory.messages:
+        llm_chain.memory.chat_memory.messages.pop()
+    if extracted_section.strip():
+        llm_chain.memory.chat_memory.add_ai_message(extracted_section)
+
     end_time = time.time()
     latency = end_time - start_time
     print(f"Latency: {latency} seconds")
+    print("-------")
     print("Response: ", str(response))
+    print("-------")
     # current_memory = messages_to_dict(llm_chain.memory.chat_memory.messages)
     # print("Current Memory: ", current_memory)
-    # return response['text']
+    # 2 & 3
     # return response['answer']
     return response
