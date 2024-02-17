@@ -21,7 +21,7 @@ API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/openai-community/
 API_URL_TEXT2TEXT = "https://api-inference.huggingface.co/models/MBZUAI/LaMini-Flan-T5-783M"
 
 tasks = ["conversational", "question-answering", "summarization", "text-generation", "text2text-generation"]
-TASK = tasks[-1]
+TASK = tasks[0]
 
 def query(user_message, past_user_inputs=[], generated_responses=[]):
     
@@ -71,7 +71,7 @@ def query(user_message, past_user_inputs=[], generated_responses=[]):
     print(f"Latency: {latency} seconds")
     result = response.json()
     
-    
+    print(result)
     
     if TASK == "conversational":
         # for conversational dialoGPT

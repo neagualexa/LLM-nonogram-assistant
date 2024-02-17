@@ -2,39 +2,19 @@
 import time
 from typing import List
 
-model_name = 'gpt4all-falcon-newbpe-q4_0.gguf'
-# model_name = 'llama-2-7b-chat.Q4_0.gguf'
+# model_name = 'gpt4all-falcon-newbpe-q4_0.gguf'
+model_name = 'llama-2-7b-chat.Q4_0.gguf'
 model_path = './models/' 
 pdf_path = "./materials/iGridd_Demo_book.pdf"
-index_path = "./index/iGridd_Demo_book_index"
-
-# question = "What are Nonograms and give me 3 tips to solve them."
-
-# model = GPT4All(model_name = model_name, model_path=model_path)
-# system_template = 'You are a helpful instructor and assistant.'
-# prompt_template = 'USER: {0}\nASSISTANT: '
-        
-# def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
-#     start_time = time.time()
-#     prompts = [user_message]
-#     first_input = system_template + prompt_template.format(prompts[0])
-#     response = model.generate(first_input, temp=0, max_tokens=100)
-#     end_time = time.time()
-#     latency = end_time - start_time
-#     print(f"Latency: {latency} seconds")
-#     print(response)
-#     return response
-#     # for prompt in prompts[1:]:
-#     #     response = model.generate(prompt_template.format(prompt), temp=0)
-#     #     print(response)
-
-# callLLM(question)
-# callLLM("Can you repeat the first tip?")
+# index_path = "./index/iGridd_Demo_book_index"
 
 # ##### LANGCHAIN #####
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.callbacks.manager import CallbackManager
 from langchain.prompts import PromptTemplate
-from langchain_community.llms import GPT4All
+
+from langchain_community.llms import GPT4All, LlamaCpp
+
 from langchain.chains import LLMChain, ConversationChain, ConversationalRetrievalChain
 # Memory
 from langchain.schema import ( SystemMessage, messages_to_dict )
@@ -85,8 +65,6 @@ local_path = (
 
 # Callbacks support token-wise streaming
 callbacks = [StreamingStdOutCallbackHandler()]
-
-# Verbose is required to pass to the callback manager
 llm = GPT4All(model=local_path, callbacks=callbacks, verbose=True)
 
 # If you want to use a custom model add the backend parameter
@@ -109,13 +87,11 @@ llm = GPT4All(model=local_path, callbacks=callbacks, verbose=True)
 prompt = ChatPromptTemplate.from_messages(
     [
         SystemMessage(
-            content="""You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
-            The user can describe the puzzle or ask for specific tips, and you will guide them through the solving process.
-            You can also engage in some casual talk, like answering greetings and simple questions like "How/Who are you?". 
-            At the beginning of a conversation in your first message, introduce yourself. 
+            content="""You are the Nonogram Assistant Chat Bot. You answer user's prompts and questions. Converse with the user and provide helpful responses.
+            Help the user tackle nonogram/griddler puzzles with ease. 
+            Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
             Always start with ASSISTANT: when responding to the question.
-            DO NOT COMPLETE THE SENTENCE!
-            ONLY answer the user's questions regarding Nonograms. If you do not know how to answer, reply by saying you do not know. Do not reply to any irrelevant questions."""
+            Do not reply to questions that are not related to Nonograms."""
         ),  # The persistent system prompt
         MessagesPlaceholder(
             variable_name="chat_history"

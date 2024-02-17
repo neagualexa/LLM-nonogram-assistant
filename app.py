@@ -1,8 +1,10 @@
 from flask import Flask, render_template, request, redirect
 import sqlite3
 from datetime import datetime
+import requests
 # from huggingface_inference import query as callLLM
-from llm_local import callLLM
+# from llm_local import callLLM
+# from azure_inference_chat import callLLM
 
 app = Flask(__name__)
 
@@ -38,9 +40,17 @@ def index():
 @app.route('/send_message', methods=['POST'])
 def send_message():
     user_message = request.form.get('user_message')
-    print('user_message '+user_message)
-    # call LLM for response
-    response = callLLM(user_message)
+    print('user_message:: '+user_message)
+    
+    ############################################## call LLM for response
+    # response = callLLM(user_message)
+    #####
+    url = 'http://127.0.0.1:5001/predict'
+    data = {'input_data': user_message}
+    response = requests.post(url, json=data)
+    print("response:: ", response)
+    response = response.json()['result']
+    ############################################## 
 
     # Add user message to the database
     conn = sqlite3.connect('database.db')
