@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from llm_local import callLLM 
+# Hosting the gguf model on a separate local server
 
 app = Flask(__name__)
 

@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 # from huggingface_inference import query as callLLM
 # from llm_local import callLLM
-# from azure_inference_chat import callLLM
+from azure_inference import callLLM
 
 app = Flask(__name__)
 
@@ -43,13 +43,13 @@ def send_message():
     print('user_message:: '+user_message)
     
     ############################################## call LLM for response
-    # response = callLLM(user_message)
+    response = callLLM(user_message)
     #####
-    url = 'http://127.0.0.1:5001/predict'
-    data = {'input_data': user_message}
-    response = requests.post(url, json=data)
-    print("response:: ", response)
-    response = response.json()['result']
+    # url = 'http://127.0.0.1:5001/predict'
+    # data = {'input_data': user_message}
+    # response = requests.post(url, json=data)
+    # print("response:: ", response)
+    # response = response.json()['result']
     ############################################## 
 
     # Add user message to the database
