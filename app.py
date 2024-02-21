@@ -10,7 +10,7 @@ from azure_inference_chat import callLLM
 app = Flask(__name__)
 
 # Chatbot name
-chatbot_name = "Your Chatbot"
+chatbot_name = "NonoAI"
 
 # Variable to store messages
 messages_cache = []

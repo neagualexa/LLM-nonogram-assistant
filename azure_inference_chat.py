@@ -34,7 +34,7 @@ system_message = "You are a helpful assistant replying the user's questions. Rep
 class LlamaCustomContentFormatter(ContentFormatterBase):
     """Custom Content formatter for LLaMa 2"""
 
-    def _format_request_payload(self, prompt: str, model_kwargs: Dict) -> bytes:
+    def format_request_payload(self, prompt: str, model_kwargs: Dict) -> bytes:
         """Formats the request according to the chosen api"""
         prompt = ContentFormatterBase.escape_special_characters(prompt)
         print("prompt:: ", prompt)
@@ -53,7 +53,7 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
         print("request_payload:: ", request_payload)
         return str.encode(request_payload)
 
-    def _format_response_payload(self, output: bytes) -> str:
+    def format_response_payload(self, output: bytes) -> str:
         """Formats response"""
         print("output:: ", output)
         return json.loads(output)["choices"][0]["message"]["content"]

@@ -49,13 +49,13 @@ def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
     req = urllib.request.Request(url, body, headers)
 
     try:
-        # response = urllib.request.urlopen(req)
+        response = urllib.request.urlopen(req)
 
-        # result = response.read()
-        # print(result)
-        # result = json.loads(result)
-        # return result["choices"][0]["message"]["content"]
-        return "test response"
+        result = response.read()
+        print(result)
+        result = json.loads(result)
+        return result["choices"][0]["message"]["content"]
+        # return "test response"
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 
