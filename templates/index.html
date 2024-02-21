@@ -22,9 +22,9 @@
         <div class="chat-history" id="chat-history">
             {% for message in messages[::-1] %}
                 <div class="message">
-                    <span class="timestamp">{{ message[3] }}</span>
-                    <p class="user">{{ message[1] }}</p>
-                    <p class="bot">{{ message[2] }}</p>
+                    <span class="timestamp">{{ message["timestamp"] }}</span>
+                    <p class="user">{{ message["user_message"] }}</p>
+                    <p class="bot">{{ message["ai_message"] }}</p>
                 </div>
             {% endfor %}
         </div>

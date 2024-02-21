@@ -3,12 +3,6 @@ import json
 import os
 import ssl
 from azure.LLM_calls import azurecredentials
-from langchain.schema import HumanMessage
-from langchain_community.llms.azureml_endpoint import (
-    AzureMLOnlineEndpoint,
-    LlamaContentFormatter,
-    ContentFormatterBase
-)
 
 '''
 HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
@@ -29,26 +23,21 @@ def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
 
     allowSelfSignedHttps(True) # this line is needed if you use self-signed certificate in your scoring service.
 
-    # Request data goes here
-    # The example below assumes JSON formatting which may be updated
-    # depending on the format your endpoint expects.
-    # More information can be found here:
-    # https://docs.microsoft.com/azure/machine-learning/how-to-deploy-advanced-entry-script
     data = {
         "messages":
         [
             { 
             "role": "user", 
-            "content": user_message},
+            "content": user_message
+            },
         ],
         "temperature": 0.8,
-        "max_tokens": 50,
+        "max_tokens": 5,
     }
 
     body = str.encode(json.dumps(data))
 
     url = API_URL
-    # Replace this with the primary/secondary key or AMLToken for the endpoint
     api_key = API_KEY
     if not api_key:
         raise Exception("A key should be provided to invoke the endpoint")
@@ -60,12 +49,13 @@ def callLLM(user_message, past_user_inputs=[], generated_responses=[]):
     req = urllib.request.Request(url, body, headers)
 
     try:
-        response = urllib.request.urlopen(req)
+        # response = urllib.request.urlopen(req)
 
-        result = response.read()
-        print(result)
-        result = json.loads(result)
-        return result["choices"][0]["message"]["content"]
+        # result = response.read()
+        # print(result)
+        # result = json.loads(result)
+        # return result["choices"][0]["message"]["content"]
+        return "test response"
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 
