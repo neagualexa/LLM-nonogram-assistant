@@ -1,8 +1,9 @@
 
-API_TOKEN = "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"
-
 import requests
 import time
+import azure.LLM_calls.azurecredentials as azurecredentials
+
+API_TOKEN = azurecredentials.hf_api_token
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
 
 # ####### LIMITED TO ONLY 25 TOKENS PER RESPONSE! VERY SHORT #######
