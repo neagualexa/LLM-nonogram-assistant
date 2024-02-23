@@ -1,17 +1,9 @@
 import urllib.request
 import json
-import os
 from typing import Dict
 import azure.LLM_calls.azurecredentials as azurecredentials
-from langchain.schema import HumanMessage, AIMessage
-# from langchain_community.chat_models.azureml_endpoint import (
-#     AzureMLChatOnlineEndpoint,
-#     LlamaContentFormatter,
-#     ContentFormatterBase
-# )
 from langchain_community.llms.azureml_endpoint import (
     AzureMLOnlineEndpoint,
-    LlamaContentFormatter,
     ContentFormatterBase
 )
 
@@ -37,16 +29,17 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
     def format_request_payload(self, prompt: str, model_kwargs: Dict) -> bytes:
         """Formats the request according to the chosen api"""
         prompt = ContentFormatterBase.escape_special_characters(prompt)
-        print("prompt:: ", prompt)
-        print("history:: ", model_kwargs.get("history"))
+        # print("prompt:: ", prompt)
+        # print("history:: ", model_kwargs.get("history"))
         request_payload = json.dumps(
             {
                 "messages": [
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": prompt},
-                    *model_kwargs.get("history")
+                    # comment system message and history if using langchain
+                    {"role": "system", "content": system_message},         # langchain does the system message magic
+                    *model_kwargs.get("history"),                          # langchain does the memory magic
+                    {"role": "user", "content": prompt}                    # langchain adds the history into the prompt with System, AI, Human labels
                 ],
-                "temperature": model_kwargs.get("temperature"), # can add default value here
+                "temperature": model_kwargs.get("temperature"),             # can add default value here
                 "max_tokens": model_kwargs.get("max_tokens"),
             }
         )
@@ -57,6 +50,10 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
         """Formats response"""
         print("output:: ", output)
         return json.loads(output)["choices"][0]["message"]["content"]
+    
+# NOTES:
+# conversation memory can be done through adding multiple messages (make sure JSON is correct, so comma at end)  -> memory preserved as we fetch it from DB
+# OR through adding the conversation into the prompt (as langchaind does it) -> memory lost at every app restart
 
 content_formatter = LlamaCustomContentFormatter()
 
@@ -65,7 +62,7 @@ llm = AzureMLOnlineEndpoint(
     endpoint_api_type="serverless",
     endpoint_api_key=API_KEY,
     content_formatter=content_formatter,
-    model_kwargs={"temperature": 0.8, "max_tokens": 200, "history": []},
+    model_kwargs={"temperature": 0.8, "max_tokens": 50, "history": []},
 )
 
 def callLLM(user_message, past_messages=[]):

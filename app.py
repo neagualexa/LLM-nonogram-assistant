@@ -2,10 +2,11 @@ from flask import Flask, render_template, request, redirect
 import sqlite3
 from datetime import datetime
 import requests
-# from huggingface_inference import query as callLLM
-# from llm_local import callLLM
-# from azure_inference import callLLM
-from azure_inference_chat import callLLM
+# from huggingface_inference import query as callLLM    # hugging face llms
+# from llm_local import callLLM                         # local gguf file llm
+# from azure_inference import callLLM                   # azure llm but pure http requests
+from azure_inference_chat import callLLM                # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
+# from llm_chain_memory import callLLM                  # azure llm with langchain and llm chain memory (memory lost at every app restart)
 
 app = Flask(__name__)
 
