@@ -2,11 +2,13 @@ from flask import Flask, render_template, request, redirect
 import sqlite3
 from datetime import datetime
 import requests
+import json
 # from huggingface_inference import query as callLLM    # hugging face llms
 # from llm_local import callLLM                         # local gguf file llm
 # from azure_inference import callLLM                   # azure llm but pure http requests
 from azure_inference_chat import callLLM                # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
 # from llm_chain_memory import callLLM                  # azure llm with langchain and llm chain memory (memory lost at every app restart)
+from puzzle_checker_inference import query_checker_hf   # HF llm checking validity of user meaning
 
 app = Flask(__name__)
 
@@ -76,6 +78,19 @@ def send_message():
         messages_cache.insert(0, (m for m in format_message(new_message)))
 
     return redirect('/')
+
+@app.route('/check_puzzle_meaning', methods=['POST'])
+def check_puzzle_meaning():
+    # Get puzzleMeaning from the form
+    puzzle_meaning = request.form.get('puzzleMeaning')
+    # Load puzzle meaning from string to json
+    print("puzzle_meaning:: ", puzzle_meaning)
+    puzzle_meaning = json.loads(puzzle_meaning)
+    user_guess = puzzle_meaning['user_guess']
+    solution = puzzle_meaning['solution']
+    
+    response = query_checker_hf(user_guess, solution)
+    return response
 
 @app.route('/clear_history')
 def clear_history():
