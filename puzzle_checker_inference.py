@@ -9,6 +9,10 @@ API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/MBZUAI/LaMini-Fla
 system_message = "Under Answer section, write 'true' if the user guess is a synonym or describes something similar to the Solution; otherwise, return 'false'. \n"
 
 def query_checker_hf(user_message, solution):
+    if user_message == solution:
+        return "true"
+    if user_message == "":
+        return "false"
     message = f"""User guess: {user_message} \nSolution: {solution} \nAnswer:"""
     context = system_message + message
 
