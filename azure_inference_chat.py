@@ -35,7 +35,7 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
             {
                 "messages": [
                     # comment system message and history if using langchain
-                    {"role": "system", "content": system_message},         # langchain does the system message magic
+                    {"role": "system", "content": model_kwargs.get("system_message")},         # langchain does the system message magic
                     *model_kwargs.get("history"),                          # langchain does the memory magic
                     {"role": "user", "content": prompt}                    # langchain adds the history into the prompt with System, AI, Human labels
                 ],
@@ -53,7 +53,7 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
     
 # NOTES:
 # conversation memory can be done through adding multiple messages (make sure JSON is correct, so comma at end)  -> memory preserved as we fetch it from DB
-# OR through adding the conversation into the prompt (as langchaind does it) -> memory lost at every app restart
+# OR through adding the conversation into the prompt (as langchain does it) -> memory lost at every app restart
 
 content_formatter = LlamaCustomContentFormatter()
 
@@ -62,13 +62,14 @@ llm = AzureMLOnlineEndpoint(
     endpoint_api_type="serverless",
     endpoint_api_key=API_KEY,
     content_formatter=content_formatter,
-    model_kwargs={"temperature": 0.8, "max_tokens": 50, "history": []},
+    model_kwargs={"temperature": 0.8, "max_tokens": 50, "history": [], "system_message": ""},
 )
 
 def callLLM(user_message, past_messages=[]):
     
     try:
         llm.model_kwargs["history"] = past_messages
+        llm.model_kwargs["system_message"] = system_message
         response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
         print("response:: ", response)
         return response
@@ -80,4 +81,53 @@ def callLLM(user_message, past_messages=[]):
         print(error.info())
         print(error.read().decode("utf8", 'ignore'))
     
+def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, past_messages=[]):
+    
+    try:
+        if completed:
+            system_message = f"""Tell the user that the level is completed and congratulate them."""
+            user_message = ""
+            llm.model_kwargs["max_tokens"] = 10
+        else:
+            cellStates, solutionCellStates = reformat_cellStates(cellStates, solutionCellStates)
+            system_message = f""" You are a helpful nonogram solver assistant. Give hints to the user to help them solve the puzzle.
+            Compare the current progress with its solution. In the data, 1 represents a filled cell and 0 represents an empty cell.
+            Current progress: \n{cellStates}\n
+            Solution: \n{solutionCellStates}
+            Do not return the solution.
+            Level meaning: {levelMeaning}\n
+            Do not return the level meaning.
+            """
+            print("system_message:: ", system_message)
+            user_message = "Help me solve the puzzle. Give me a hint."
+            llm.model_kwargs["max_tokens"] = 100
+            
+        llm.model_kwargs["system_message"] = system_message
+        llm.model_kwargs["history"] = past_messages
+        
+        response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
+        print("response:: ", response)
+        return response
+        # return "test response"
+    except urllib.error.HTTPError as error:
+        print("The request failed with status code: " + str(error.code))
 
+        print(error.info())
+        print(error.read().decode("utf8", 'ignore'))
+        
+def reformat_cellStates(cellStates, solutionCellStates):
+    """
+        At every | character, add a new line
+    """
+    cellStates = cellStates.split("|")
+    solutionCellStates = solutionCellStates.split("|")
+    # remove last newline
+    cellStates = cellStates[:-1]
+    solutionCellStates = solutionCellStates[:-1]
+    
+    gridState = ""
+    solutionGridState = ""
+    for i in range(len(cellStates)):
+        gridState += cellStates[i] + "\n"
+        solutionGridState += solutionCellStates[i] + "\n"
+    return gridState, solutionGridState
