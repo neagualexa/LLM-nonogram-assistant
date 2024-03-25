@@ -1,11 +1,14 @@
 import urllib.request
 import json
+import math
 from typing import Dict
 import azure.LLM_calls.azurecredentials as azurecredentials
 from langchain_community.llms.azureml_endpoint import (
     AzureMLOnlineEndpoint,
     ContentFormatterBase
 )
+from system_prompt import system_prompt
+from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates
 
 '''
 HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
@@ -84,23 +87,23 @@ def callLLM(user_message, past_messages=[]):
 def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, past_messages=[]):
     
     try:
-        if completed:
+        cellStates, solutionCellStates, width, height = reformat_cellStates(cellStates, solutionCellStates)
+        differences = compare_grids(cellStates, solutionCellStates)
+        wrong_selections = differences["wrong_selection"]
+        missing_selections = differences["missing_selection"]
+        
+        if completed and (wrong_selections == [] and missing_selections == []):
             system_message = f"""Tell the user that the level is completed and congratulate them."""
             user_message = ""
             llm.model_kwargs["max_tokens"] = 10
         else:
-            cellStates, solutionCellStates = reformat_cellStates(cellStates, solutionCellStates)
-            system_message = f""" You are a helpful nonogram solver assistant. Give hints to the user to help them solve the puzzle.
-            Compare the current progress with its solution. In the data, 1 represents a filled cell and 0 represents an empty cell.
-            Current progress: \n{cellStates}\n
-            Solution: \n{solutionCellStates}
-            Do not return the solution.
-            Level meaning: {levelMeaning}\n
-            Do not return the level meaning.
-            """
+            wrong_selections_sentences, missing_selections_sentences = generate_mistake_markers(differences)
+            _, solutionCellStates = print_format_cellStates(cellStates, solutionCellStates)
+            system_message = system_prompt(cellStates, solutionCellStates, levelMeaning, height, width, wrong_selections_sentences, missing_selections_sentences)
+
             print("system_message:: ", system_message)
-            user_message = "Help me solve the puzzle. Give me a hint."
-            llm.model_kwargs["max_tokens"] = 100
+            user_message = ""
+            llm.model_kwargs["max_tokens"] = 200
             
         llm.model_kwargs["system_message"] = system_message
         llm.model_kwargs["history"] = past_messages
@@ -115,19 +118,3 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
         print(error.info())
         print(error.read().decode("utf8", 'ignore'))
         
-def reformat_cellStates(cellStates, solutionCellStates):
-    """
-        At every | character, add a new line
-    """
-    cellStates = cellStates.split("|")
-    solutionCellStates = solutionCellStates.split("|")
-    # remove last newline
-    cellStates = cellStates[:-1]
-    solutionCellStates = solutionCellStates[:-1]
-    
-    gridState = ""
-    solutionGridState = ""
-    for i in range(len(cellStates)):
-        gridState += cellStates[i] + "\n"
-        solutionGridState += solutionCellStates[i] + "\n"
-    return gridState, solutionGridState

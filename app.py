@@ -104,7 +104,7 @@ def check_puzzle_progress():
     completed = True if puzzle_progress['completed'].lower() == "true" else False
     levelMeaning = puzzle_progress['levelMeaning']
     
-    print("cellStates:: ", cellStates, "solutionCellStates:: ", solutionCellStates, "completed:: ", completed, "levelMeaning:: ", levelMeaning)
+    # print("cellStates:: ", cellStates, "solutionCellStates:: ", solutionCellStates, "completed:: ", completed, "levelMeaning:: ", levelMeaning)
     ############################################## call LLM for response
     response = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, messages_cache)
     ############################################## 
@@ -127,6 +127,8 @@ def check_puzzle_progress():
         messages_cache.insert(0, (m for m in format_message(new_message)))
 
     redirect('/')
+    # refresh page
+    # return redirect('/')
     return response
 
 @app.route('/clear_history')
