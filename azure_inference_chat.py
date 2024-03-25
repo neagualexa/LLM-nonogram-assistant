@@ -1,6 +1,6 @@
 import urllib.request
 import json
-import math
+import time
 from typing import Dict
 import azure.LLM_calls.azurecredentials as azurecredentials
 from langchain_community.llms.azureml_endpoint import (

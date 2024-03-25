@@ -18,20 +18,23 @@
         </label> -->
     </div>
 
+    <!-- <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div> -->
+
     <div class="chat-container" id="chat-container">
         <div class="chat-history" id="chat-history">
             {% for message in messages[::-1] %}
                 <div class="message">
                     <span class="timestamp">{{ message["timestamp"] }}</span>
-                    <p class="user">{{ message["user_message"] }}</p>
-                    <p class="bot">{{ message["ai_message"] }}</p>
+                    <pre class="user">{{ message["user_message"] }}</pre>
+                    <pre class="bot">{{ message["ai_message"] }}</pre>
                 </div>
             {% endfor %}
         </div>
     </div>
     <div class="chat-input">
         <form action="/send_message" method="post" onsubmit="return handleFormSubmit();" style="align-items: center; display: flex; justify-content: center;">
-            <div id="loading-spinner" class="hidden"></div>
             <input type="text" name="user_message" placeholder="Type your message...">
             <!-- <textarea name="user_message" placeholder="Type your message..." rows="3" style="width: 70%;"></textarea> -->
             <button type="submit">Send</button>
@@ -43,43 +46,40 @@
     // document.body.classList.value = localStorage.getItem('mode') || 'light-mode';
 
     async function handleFormLoading() {
-        const userInput = document.querySelector('input[name="user_message"]');
-        const userMessage = userInput.value.trim();
+    const userInput = document.querySelector('input[name="user_message"]');
+    const userMessage = userInput.value.trim();
+    // const loadingOverlay = document.getElementById('loading-overlay');
 
-        if (event.shiftKey && event.keyCode === 13) {
-            userInput.value += '\n';
-        } else if (userMessage !== '') {
-            const loadingSpinner = document.getElementById('loading-spinner');
-            loadingSpinner.classList.remove('hidden');
+    if (event.shiftKey && event.keyCode === 13) {
+        userInput.value += '\n';
+    } else if (userMessage !== '') {
+        // loadingOverlay.style.display = 'block';
 
-            try {
-                const formData = new FormData();
-                formData.append('user_message', userMessage);
+        try {
+            const formData = new FormData();
+            formData.append('user_message', userMessage);
 
-                const response = await fetch('/send_message', {
-                    method: 'POST',
-                    body: formData,
-                });
+            const response = await fetch('/send_message', {
+                method: 'POST',
+                body: formData,
+            });
 
-                if (response.ok) {
-                    const data = await response.text();
-                    console.log(data);
-                    // Handle the response as needed
-
-                    // Hide the loading spinner when the response is received
-                    loadingSpinner.classList.add('hidden');
-                } else {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                // Handle errors if needed
-
-                // Hide the loading spinner in case of an error
-                loadingSpinner.classList.add('hidden');
+            if (response.ok) {
+                const data = await response.text();
+                console.log(data);
+                // Handle the response as needed
+            } else {
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
+        } catch (error) {
+            console.error('Error:', error);
+            // Handle errors if needed
+        } finally {
+            // Hide the loading overlay regardless of success or failure
+            // loadingOverlay.style.display = 'none';
         }
     }
+}
 
     function handleFormSubmit() {
         const userInput = document.querySelector('textarea[name="user_message"]');
