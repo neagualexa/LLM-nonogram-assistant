@@ -110,6 +110,8 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
         
         response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
         print("response:: ", response)
+        if 'error' in response:
+            return "Server error:: " + response["error"]
         return response
         # return "test response"
     except urllib.error.HTTPError as error:

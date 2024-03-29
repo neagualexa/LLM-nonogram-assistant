@@ -28,6 +28,8 @@ def query_checker_hf(user_message, solution):
     result = response.json()
     
     print(result)
+    if 'error' in result:
+        return "error"
     return result[0]['generated_text']
 
 if __name__ == "__main__":
