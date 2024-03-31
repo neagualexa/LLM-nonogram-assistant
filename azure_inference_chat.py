@@ -7,9 +7,9 @@ from langchain_community.llms.azureml_endpoint import (
     AzureMLOnlineEndpoint,
     ContentFormatterBase
 )
-from system_prompt import system_prompt
-from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates
-
+from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around
+from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position
+from puzzle_checker_inference import component_pipeline_query_hf
 '''
 HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
 '''
@@ -68,21 +68,25 @@ llm = AzureMLOnlineEndpoint(
     model_kwargs={"temperature": 0.8, "max_tokens": 50, "history": [], "system_message": ""},
 )
 
+################ Function call for chat message conversation ################
+
 def callLLM(user_message, past_messages=[]):
     
     try:
         llm.model_kwargs["history"] = past_messages
         llm.model_kwargs["system_message"] = system_message
-        response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
-        print("response:: ", response)
-        return response
-        # return "test response"
+        # response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
+        # print("response:: ", response)
+        # return response
+        return "test response"
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 
         # Print the headers - they include the requert ID and the timestamp, which are useful for debugging the failure
         print(error.info())
         print(error.read().decode("utf8", 'ignore'))
+        
+################ Function call for progress feedback ################
     
 def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, past_messages=[]):
     
@@ -97,13 +101,37 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             user_message = ""
             llm.model_kwargs["max_tokens"] = 10
         else:
-            wrong_selections_sentences, missing_selections_sentences = generate_mistake_markers(differences)
+            #### Using Azure LLM to generate a response from scratch
+            # wrong_selections_sentences, missing_selections_sentences = generate_mistake_markers(differences)
             _, solutionCellStates = print_format_cellStates(cellStates, solutionCellStates)
-            system_message = system_prompt(cellStates, solutionCellStates, levelMeaning, height, width, wrong_selections_sentences, missing_selections_sentences)
+            # system_message = system_prompt(cellStates, solutionCellStates, levelMeaning, height, width, wrong_selections_sentences, missing_selections_sentences)
+            
 
-            print("system_message:: ", system_message)
+            # print("system_message:: ", system_message)
             user_message = ""
-            llm.model_kwargs["max_tokens"] = 200
+            llm.model_kwargs["max_tokens"] = 100
+            
+            #### Using sub component LLMs to generate a response
+            # system_message_random_pos = system_prompt_random(wrong_selections, missing_selections)
+            # print("system_message_random_pos:: ", system_message_random_pos)
+            # random_position_response = component_pipeline_query_hf(system_message_random_pos)
+            # print("random_position LLM:: ", random_position_response)
+            # print("cellStates:: ", cellStates)
+            print("wrong_selections:: ", wrong_selections)
+            print("missing_selections:: ", missing_selections)
+            random_position = random_element(wrong_selections, missing_selections)
+            print("random_position:: ", random_position)
+            position_description = describe_point_position(random_position, width, height)
+            print("Backend position description:: ", position_description)
+            system_message_positioning = system_prompt_positioning(height, width, random_position, position_description)
+            print("system_message:: ", system_message_positioning)
+            positioning_response = component_pipeline_query_hf(system_message_positioning)
+            print("positioning LLM:: ", positioning_response)
+            system_message_observation = system_prompt_observe_around(height, width, random_position, positioning_response, solutionCellStates)
+            
+            system_message = system_message_observation
+            
+            
             
         llm.model_kwargs["system_message"] = system_message
         llm.model_kwargs["history"] = past_messages

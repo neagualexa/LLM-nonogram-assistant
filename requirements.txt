@@ -1,0 +1,7 @@
+# app
+flask
+sqlite3
+
+# llm
+azure
+langchain

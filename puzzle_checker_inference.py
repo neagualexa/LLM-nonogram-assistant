@@ -1,20 +1,23 @@
 import requests
 import time
+import urllib.error
 import azure.LLM_calls.azurecredentials as azurecredentials
+from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates
+
 
 API_TOKEN = azurecredentials.hf_api_token
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
 API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/MBZUAI/LaMini-Flan-T5-783M"
 
-system_message = "Under Answer section, write 'true' if the user guess is a synonym or describes something similar to the Solution; otherwise, return 'false'. \n"
+meaning_system_message = "Under Answer section, write 'true' if the user guess is a synonym or describes something similar to the Solution; otherwise, return 'false'. \n"
 
-def query_checker_hf(user_message, solution):
+def meaning_checker_hf(user_message, solution):
     if user_message.lower() == solution.lower():
         return "true"
     if user_message == "":
         return "false"
     message = f"""User guess: {user_message} \nSolution: {solution} \nAnswer:"""
-    context = system_message + message
+    context = meaning_system_message + message
 
     start_time = time.time() 
     payload = {
@@ -29,13 +32,47 @@ def query_checker_hf(user_message, solution):
     
     print(result)
     if 'error' in result:
+        print("error:: ", result)
         return "error"
     return result[0]['generated_text']
+
+# API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+# API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
+
+def component_pipeline_query_hf(system_prompt):
+
+    context = system_prompt
+
+    start_time = time.time() 
+    payload = {
+            "inputs": context,
+            "use_cache": False,
+            "parameters": {
+                "max_new_tokens": 30,
+                # "return_full_text": False, #  for mistral If set to False, the return results will not contain the original query making it easier for prompting.
+                "temperature": 0.2,
+                "top_p": 0.7,
+                "top_k": 90,
+            }
+        }
+    response = requests.post(API_URL_TEXTGEN, headers=headers, json=payload)
+        
+    end_time = time.time()
+    latency = end_time - start_time
+    print(f"Latency: {latency} seconds")
+    result = response.json()
+    
+    # print(result)
+    if 'error' in result:
+        print("error:: ", result)
+        return "error"
+    return result[0]['generated_text']
+
 
 if __name__ == "__main__":
     user_message = "brown drink"
     solution = "coffee"
-    response = query_checker_hf(user_message, solution)
+    response = meaning_checker_hf(user_message, solution)
     print("response:: ", response)
     
   
