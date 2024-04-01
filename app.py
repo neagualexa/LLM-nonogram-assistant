@@ -84,7 +84,7 @@ def check_puzzle_meaning():
     # Get puzzleMeaning from the form
     puzzle_meaning = request.form.get('puzzleMeaning')
     # Load puzzle meaning from string to json
-    print("puzzle_meaning:: ", puzzle_meaning)
+    # print("puzzle_meaning:: ", puzzle_meaning)
     puzzle_meaning = json.loads(puzzle_meaning)
     user_guess = puzzle_meaning['user_guess']
     solution = puzzle_meaning['solution']
@@ -114,7 +114,7 @@ def check_puzzle_progress():
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('INSERT INTO messages (user_message, ai_message) VALUES (?, ?)',
-                    ("Help me solve the level.", response))
+                    ("Progress feedback:", response))
         conn.commit()
         
         # Fetch the new message

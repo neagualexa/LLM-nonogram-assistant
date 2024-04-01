@@ -21,7 +21,10 @@ def meaning_checker_hf(user_message, solution):
 
     start_time = time.time() 
     payload = {
-            "inputs": context
+            "inputs": context,
+            "parameters": {
+                "return_full_text": False
+            }
         }
     response = requests.post(API_URL_TEXTGEN, headers=headers, json=payload)
         
@@ -30,16 +33,18 @@ def meaning_checker_hf(user_message, solution):
     print(f"Latency: {latency} seconds")
     result = response.json()
     
-    print(result)
     if 'error' in result:
         print("error:: ", result)
         return "error"
-    return result[0]['generated_text']
+    print(result)
+    result = filter_crop_llm_response(result[0]['generated_text'])
+    print(result)
+    return result
 
 # API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
-# API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
+API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
 
-def component_pipeline_query_hf(system_prompt):
+def component_pipeline_query_hf(system_prompt, max_new_tokens):
 
     context = system_prompt
 
@@ -48,8 +53,8 @@ def component_pipeline_query_hf(system_prompt):
             "inputs": context,
             "use_cache": False,
             "parameters": {
-                "max_new_tokens": 30,
-                # "return_full_text": False, #  for mistral If set to False, the return results will not contain the original query making it easier for prompting.
+                "max_new_tokens": max_new_tokens,
+                "return_full_text": False, #  for mistral If set to False, the return results will not contain the original query making it easier for prompting.
                 "temperature": 0.2,
                 "top_p": 0.7,
                 "top_k": 90,
@@ -68,6 +73,13 @@ def component_pipeline_query_hf(system_prompt):
         return "error"
     return result[0]['generated_text']
 
+def filter_crop_llm_response(response):
+    # only accept the sentence between the first ':' and '\n' 
+    response = response.split("\n")[0]
+    if ("'" in response):
+        if (response[-1] == "'"):
+            response = response[:-1]
+    return response
 
 if __name__ == "__main__":
     user_message = "brown drink"

@@ -7,7 +7,7 @@ from langchain_community.llms.azureml_endpoint import (
     AzureMLOnlineEndpoint,
     ContentFormatterBase
 )
-from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around
+from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around, system_prompt_hint
 from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position
 from puzzle_checker_inference import component_pipeline_query_hf
 '''
@@ -100,6 +100,15 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             system_message = f"""Tell the user that the level is completed and congratulate them."""
             user_message = ""
             llm.model_kwargs["max_tokens"] = 10
+            llm.model_kwargs["system_message"] = system_message
+            llm.model_kwargs["history"] = past_messages
+            
+            response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
+            print("response:: ", response)
+            if 'error' in response:
+                return "Server error:: " + response["error"]
+            return response
+
         else:
             #### Using Azure LLM to generate a response from scratch
             # wrong_selections_sentences, missing_selections_sentences = generate_mistake_markers(differences)
@@ -108,43 +117,62 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             
 
             # print("system_message:: ", system_message)
-            user_message = ""
+            user_message = "Level Check Pipeline"
             llm.model_kwargs["max_tokens"] = 100
             
             #### Using sub component LLMs to generate a response
+            start_time = time.time() 
+            #           Choose a random mistake to talk about
             # system_message_random_pos = system_prompt_random(wrong_selections, missing_selections)
             # print("system_message_random_pos:: ", system_message_random_pos)
             # random_position_response = component_pipeline_query_hf(system_message_random_pos)
             # print("random_position LLM:: ", random_position_response)
             # print("cellStates:: ", cellStates)
-            print("wrong_selections:: ", wrong_selections)
-            print("missing_selections:: ", missing_selections)
+            # print("wrong_selections:: ", wrong_selections)
+            # print("missing_selections:: ", missing_selections)
             random_position = random_element(wrong_selections, missing_selections)
-            print("random_position:: ", random_position)
+            # print("random_position:: ", random_position)
+            
+            #           Describe the position in simple natural language
             position_description = describe_point_position(random_position, width, height)
             print("Backend position description:: ", position_description)
+            
+            #           Formulate a phrase describing the position
             system_message_positioning = system_prompt_positioning(height, width, random_position, position_description)
-            print("system_message:: ", system_message_positioning)
-            positioning_response = component_pipeline_query_hf(system_message_positioning)
+            # print("system_message:: ", system_message_positioning)
+            positioning_response_prev = (component_pipeline_query_hf(system_message_positioning, 20))
+            positioning_response = filter_crop_llm_response(positioning_response_prev)
             print("positioning LLM:: ", positioning_response)
+            
+            #           Use the position to observe the surroundings
             system_message_observation = system_prompt_observe_around(height, width, random_position, positioning_response, solutionCellStates)
+            # print("system_message_observation:: ", system_message_observation)
+            observation_response_prev = (component_pipeline_query_hf(system_message_observation, 50))
+            observation_response = filter_crop_llm_response(observation_response_prev)
+            print("observation LLM:: "+ observation_response + '\n||\n' + observation_response_prev)
             
-            system_message = system_message_observation
+            #           Use the observation and position description to give feedback
+            system_message_hint = system_prompt_hint(positioning_response, observation_response)
+            hint_response = filter_crop_llm_response(component_pipeline_query_hf(system_message_hint, 100))
+            print("hint LLM:: ", hint_response)
+            end_time = time.time()
+            latency = end_time - start_time
+            print(f"Overall LLM pipeline Latency: {latency} seconds")
             
-            
-            
-        llm.model_kwargs["system_message"] = system_message
-        llm.model_kwargs["history"] = past_messages
-        
-        response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
-        print("response:: ", response)
-        if 'error' in response:
-            return "Server error:: " + response["error"]
-        return response
-        # return "test response"
+            return hint_response
+            # system_message = system_message_hint  
+
+        # # return "test response"
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 
         print(error.info())
         print(error.read().decode("utf8", 'ignore'))
         
+def filter_crop_llm_response(response):
+    # only accept the sentence between the first ':' and '\n' 
+    response = response.split("\n")[0]
+    if ("'" in response):
+        if (response[-1] == "'"):
+            response = response[:-1]
+    return response

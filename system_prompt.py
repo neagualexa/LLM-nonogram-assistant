@@ -7,24 +7,44 @@ def system_prompt_positioning(height, width, position, position_description):
 def system_prompt_observe_around(height, width, position, positioning_area, solutionCellStates):
     return sys_observe_around.format(height=height, width=width, position=position, positioning_area=positioning_area, solutionCellStates=solutionCellStates)
 
+def system_prompt_hint(position_description_rephrased, observation):
+    return sys_hint.format(position_description_rephrased=position_description_rephrased, observation=observation)
+
 ######### System Prompts #########
 # receives simple descriptions of the location of a point in a grid and rephrases them
-sys_positioning = """Your task is to rephrase the description of the location of a cell in a grid. Rephrase the description in a concise and clear manner. Focus on providing a similar description using different words or phrases. Only complete the Rephrased Description section.
+sys_positioning = """Your task is to rephrase the description of the location of a cell in a grid. Rephrase the description in a concise and clear manner. Focus on providing a similar description using different words or phrases and formulate a sentence. 
+Only complete the Rephrased Description Sentence section.
+
 Description : '{position_description}'
-Rephrased Description: | """
+Rephrased Description Sentence: '"""
 # Grid size: {width}x{height}
 # Position (x, y): {position}
 
 sys_observe_around = """You are observing a 2D grid of size {height}x{width}. The grid is represented by a binary data set where 0 represents an empty cell and 1 represents a filled cell. The grid is 1-indexed, meaning the first row and column are indexed as 1. 
-Observe the cells around the position (x, y) and describe the contents of the cells in the surrounding area. Use terms such as 'empty', 'filled'.
-Under Observation section, return a string describing the contents of the surrounding cells. Do not return the position of the cells and the exact grid.
-Do not return anything else.
+Observe the cells around the position (x, y) and describe the contents of cells in the surrounding area. Use terms such as 'empty', 'filled'.
+
+Under Observation section, return a string describing the contents of the surrounding cells. Use words like "should", "might". 
+
+Do not return the position (x, y) of the cell and the exact grid.
+Only complete the Observation section.
 
 (x,y):{position}
-Surronding Area: {positioning_area}
+Surronding Area: '{positioning_area}'
 Grid:
 {solutionCellStates}
-Observation: """
+Observation: '"""
+
+sys_hint = """You're assisting a user in solving a nonogram puzzle, which is a type of logic puzzle. In a nonogram puzzle, the goal is to fill in cells in a grid to create a picture or pattern. The numbers on the top & left sides of the grid indicate how many consecutive filled cells there are in each row or column, separated by at least one empty cell. The completed grid reveals a hidden image or pattern.
+
+Your goal is to provide a helpful hint based on the known location of the mistake and the observation describing that location area. 
+
+Use natural language to explain the errors and suggest corrective actions to help the user progress towards solving the puzzle successfully. Your assistance should aim to improve the user's understanding of the puzzle mechanics and help them apply effective solving strategies.Focus on providing a clear direction to help the user make strategic decisions in filling the cells. Avoid giving direct solutions or overly complex explanations. 
+
+Only complete the Hint section.
+
+Location area of mistake: '{position_description_rephrased}'
+Observation: '{observation}'
+Hint: '"""
 
 ###########################
 # sys_positioning only provides the overall positioning of a location in a grid
