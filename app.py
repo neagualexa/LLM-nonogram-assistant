@@ -3,11 +3,11 @@ import sqlite3
 from datetime import datetime
 import requests
 import json
-# from huggingface_inference import query as callLLM    # hugging face llms
-# from llm_local import callLLM                         # local gguf file llm
-# from azure_inference import callLLM                   # azure llm but pure http requests
+# from old.huggingface_inference import query as callLLM  # hugging face llms
+# from old.llm_local import callLLM                       # local gguf file llm
+# from old.azure_inference import callLLM                 # azure llm but pure http requests
 from azure_inference_chat import callLLM, callLLM_progress_checker                # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
-# from llm_chain_memory import callLLM                  # azure llm with langchain and llm chain memory (memory lost at every app restart)
+# from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
 
 app = Flask(__name__)
