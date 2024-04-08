@@ -1,7 +1,20 @@
 # app
 flask
-sqlite3
+flask_cors
 
 # llm
-azure
+# azure
 langchain
+
+# speech pipeline
+torch
+transformers
+datasets            # to load the dataset for the text-to-speech model
+librosa             # to load audio files
+# pyaudio           # to record audio through python
+wave                # to save audio files that were recorded in python
+pygame              # to play audio files
+soundfile           # to save audio files from numpy arrays
+# sentencepiece
+# MoviePy
+# pydub
