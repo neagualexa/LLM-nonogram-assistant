@@ -8,34 +8,41 @@ app = Flask(__name__)
 # add cors support
 CORS(app)
 
+UPLOAD_FOLDER = './conversation'
+
 @app.route('/', methods=['POST'])
 def index():
     return 'Speech Server is running', 200
 
 @app.route('/verbal', methods=['POST'])
 def synth():
+    start_time = time.time()
     try:
         print("Received request to synthesize text")
-        # Assuming the file field name is 'audioFile'
-        audio_file = request.files['audioFile']
-        counter = request.form.get('fileCounter')
-        file_path = './samples/'+ audio_file.filename      
-        print(audio_file, file_path, counter,  file_path.split(".")[2])
         
-        # Save the file to the './samples' directory
+        if 'audioFile' not in request.files:
+            return 'No file part'
+
+        audio_file = request.files['audioFile']
+        if audio_file.filename == '':
+            return 'No selected file'
+
+        file_path = './speech_pipeline/conversation/'+ audio_file.filename 
+        # fileName = request.form['fileName']     
+        print(audio_file, file_path, file_path.split(".")[2])
+        
+        
+        # Save the file to the './conversation' directory
         audio_file.save(file_path)
         print("File saved")
 
-        try:
-            # Process the file using your speech_pipeline function
-            speech_pipeline(file_path)
-            # delete the original file
-            os.remove(file_path)
-        except Exception as e:
-            print(f"Error processing file with speech_pipeline: {str(e)}")
-            os.remove(file_path)
-            return 'Error processing file', 500
-
+        # Process the file using your speech_pipeline function
+        speech_pipeline(file_path)
+        # delete the original file
+        # os.remove(file_path)
+        end_time = time.time()
+        print("Time taken: ", end_time-start_time)  #TODO: to be saved in a csv file alongside audio duration and response duration and level
+        
         return 'File successfully received and processed! on file: ' + file_path
     
     except Exception as e:

@@ -78,7 +78,8 @@ def callLLM(user_message, past_messages=[]):
         # response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
         # print("response:: ", response)
         # return response
-        return "test response"
+        # return "test response"
+        return component_pipeline_query_hf(user_message, 20)
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 

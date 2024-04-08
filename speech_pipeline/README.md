@@ -10,6 +10,7 @@ The `speech_pipeline` folder contains the following:
 2. `pipeline.py` caintains all the connections between all subcomponents of the verbal capabilities
 3. `speech_to_text.py` converts the user's audio recorded in Unity into text
 4. `text_to_speech.py` uses a natural voice dataset to generates an audio for the LLM's response
+5. `audio_functions.py` contains a couple of funcitions for playing or recording audio
 
 ## How to Run
 

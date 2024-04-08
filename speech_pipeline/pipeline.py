@@ -1,5 +1,6 @@
 import speech_to_text
 import text_to_speech
+import audio_functions
 import time
 import os
 import requests
@@ -15,11 +16,12 @@ def speech_pipeline(file_path):
     wait_until_file_exists(file_path)
     
     # wav file expected
-    transcription = speech_to_text.speech_to_text(file_path)
+    transcription = speech_to_text.transcribe_audio(file_path)
     print("Transcription of original: ", transcription)
     
     print("Passing to LLM...") 
-    llm_response = connect_to_llm(transcription[0])
+    llm_response = connect_to_llm(transcription) #[0]) #models
+    print("LLM response:: ", llm_response)
     
     if llm_response == None:
         print("LLM response is None")
@@ -28,10 +30,12 @@ def speech_pipeline(file_path):
         print("ERROR:: LLM response error")
         return
     
-    output_file = "."+file_path.split(".")[1] + "_pipeline.wav"
-    print("Output file: ", output_file, " from ", file_path)
-    speech = text_to_speech.get_audio_from_text(llm_response, output_file)  ## TESTING - works on ubuntu not on langchain image
-    speech_to_text.play_audio(output_file)
+    output_file_path = "."+file_path.split(".")[1] + "_response.wav"
+    print("Output file: ", output_file_path, " from ", file_path)
+    speech = text_to_speech.get_audio_from_text(llm_response, output_file_path)  ## TESTING - works on ubuntu not on langchain image
+    
+    audio_functions.convert_to_standard_wav(output_file_path) # google tts does not save as standard wav
+    audio_functions.play_audio(output_file_path)
     
     # HTTP POST request to share the audio file to a server IP
     # print("Sharing transcript and audio to server...")
@@ -49,13 +53,14 @@ def connect_to_llm(transcription):
     
     # add transcription into form data
     data = {'user_message': transcription}
-    response = requests.post(ai_url, json=data)
+    print("Transcription data: ", data)
+    response = requests.post(ai_url, data=data)
     
     if response.status_code != 200:
         print('connect_to_llm Error: Failed to get response from LLM. Status code: ', response.status_code)
         return 'connect_to_llm Error: Failed to get response from LLM. Status code: ', response.status_code
-    llm_response = response.text[:-4]
-    print("LLM response: ", llm_response)
+    llm_response = response.text
+    # print("LLM response: ", llm_response)
     return llm_response
     
     

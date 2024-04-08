@@ -48,7 +48,7 @@ def index():
 @app.route('/send_message', methods=['POST'])
 def send_message():
     user_message = request.form.get('user_message')
-    print('user_message:: '+user_message)
+    print('user_message:: ', user_message)
     
     ############################################## call LLM for response
     response = callLLM(user_message, messages_cache)
@@ -77,7 +77,9 @@ def send_message():
         # Update the messages cache
         messages_cache.insert(0, (m for m in format_message(new_message)))
 
-    return redirect('/')
+    redirect('/')
+    
+    return response
 
 @app.route('/check_puzzle_meaning', methods=['POST'])
 def check_puzzle_meaning():

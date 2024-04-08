@@ -6,15 +6,21 @@ flask_cors
 # azure
 langchain
 
-# speech pipeline
+# speech pipeline models
 torch
 transformers
-datasets            # to load the dataset for the text-to-speech model
-librosa             # to load audio files
+librosa             # to load audio files for models
 # pyaudio           # to record audio through python
 wave                # to save audio files that were recorded in python
 pygame              # to play audio files
+pydub               # to convert and play audio files 
 soundfile           # to save audio files from numpy arrays
-# sentencepiece
-# MoviePy
-# pydub
+
+# speech to text
+SpeechRecognition   # to convert speech to text Google
+
+# text to speech
+datasets            # to load the dataset for the text-to-speech model
+fsspec[http]<=2024.2.0,>=2023.1.0 # try to solve bug in datasets
+gtts                # to convert text to speech Google  
+
