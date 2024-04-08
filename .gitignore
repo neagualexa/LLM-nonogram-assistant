@@ -35,9 +35,14 @@ db.sqlite3
 # Static files
 staticfiles/
 
-# Models GGUF folder
+# Models GGUF folder and azure files
+models/
+azure/
 models/*
-azure/LLM_calls/*
+azure/*
+
+# run files
+run.bash
 
 # Kniowledge base materials
 materials/*
