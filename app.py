@@ -108,15 +108,20 @@ def check_puzzle_progress():
     
     # print("cellStates:: ", cellStates, "solutionCellStates:: ", solutionCellStates, "completed:: ", completed, "levelMeaning:: ", levelMeaning)
     ############################################## call LLM for response
-    response = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, messages_cache)
+    response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, messages_cache)
+    #####
+    url = 'http://localhost:5005/verbal_hint'
+    data = {'responseText': response_llm, 'counter': 0}
+    response = requests.post(url, data=data)
+    print("response from verbal_hint:: ", response)
     ############################################## 
 
-    if response:
+    if response_llm:
         # Add user message to the database
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('INSERT INTO messages (user_message, ai_message) VALUES (?, ?)',
-                    ("Progress feedback:", response))
+                    ("Progress feedback:", response_llm))
         conn.commit()
         
         # Fetch the new message
@@ -131,7 +136,7 @@ def check_puzzle_progress():
     redirect('/')
     # refresh page
     # return redirect('/')
-    return response
+    return response_llm
 
 @app.route('/clear_history')
 def clear_history():

@@ -39,10 +39,24 @@ def speech_pipeline(file_path):
     
     # HTTP POST request to share the audio file to a server IP
     # print("Sharing transcript and audio to server...")
-    # # share_transcript_audio(llm_response, url, output_file)            # sending llm TRANSCRIPT and AUDIO 
+    # # share_transcript_audio(llm_response, url, output_file_path)            # sending llm TRANSCRIPT and AUDIO 
     # # share_transcript_audio(llm_response, pipeline_file, url)          # sending llm TRANSCRIPT and AUDIO
     # share_transcript_audio("test Pipeline file",url , pipeline_file)    # sending dummy TRANSCRIPT and dummy AUDIO
 
+def verbalise_hint(hint_text, counter):
+    print("Verbalising hint...")
+
+    # text to speech
+    output_file_path = "./speech_pipeline/verbal_hints/hint_" + str(counter) + ".wav"
+    print("Output file: ", output_file_path)
+    speech = text_to_speech.get_audio_from_text(hint_text, output_file_path)  ## TESTING - works on ubuntu not on langchain image
+    
+    audio_functions.convert_to_standard_wav(output_file_path) # google tts does not save as standard wav
+    audio_functions.play_audio(output_file_path)
+    
+    # HTTP POST request to share the audio file to a server IP
+    # print("Sharing hint audio to server...")
+    # share_transcript_audio(hint_text, url, output_file_path)            # sending hint TRANSCRIPT and
         
 def connect_to_llm(transcription):
     """ 
