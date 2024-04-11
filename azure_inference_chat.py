@@ -17,7 +17,7 @@ HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
 API_URL = azurecredentials.api_url
 API_KEY = azurecredentials.key
 
-system_message = "You are a helpful assistant replying the user's questions. Reply in short sentences."
+system_message = "You are NonoAI, a helpful assistant replying the user's questions. Reply in short sentences."
 # system_message = """You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
 #             The user can describe the puzzle or ask for specific tips, and you will guide them through the solving process.
 #             You can also engage in some casual talk, like answering greetings and simple questions like "How/Who are you?". 
@@ -79,7 +79,7 @@ def callLLM(user_message, past_messages=[]):
         # print("response:: ", response)
         # return response
         # return "test response"
-        return component_pipeline_query_hf(user_message, 20)
+        return component_pipeline_query_hf(system_message +'\nUser question:'+ user_message, 20) # FREE HF inference (FOR TESTING) # TODO: adapt to implement the memory/systemprompt
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 

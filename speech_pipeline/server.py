@@ -41,7 +41,7 @@ def synth():
         # delete the original file
         # os.remove(file_path)
         end_time = time.time()
-        print("Time taken: ", end_time-start_time)  #TODO: to be saved in a csv file alongside audio duration and response duration and level
+        print("/verbal :: Time taken: ", end_time-start_time)  #TODO: to be saved in a csv file alongside audio duration and response duration and level
         
         return 'File successfully received and processed! on file: ' + file_path
     
@@ -64,8 +64,11 @@ def ai_hint():
         
         # text to speech
         file_path = './speech_pipeline/conversation/' + response_text + '.mp3'
-        verbalise_hint(pre_text + response_text, counter)
-        
+        audio_duration = verbalise_hint(pre_text + response_text, counter)
+        end_time = time.time()
+        # time lapse also contains the time taken to play the audio file        
+        print("/verbal_hint :: Time taken: ", end_time-start_time-audio_duration, "; audio duration to play out loud: ", audio_duration)  
+        #TODO: to be saved in a csv file alongside audio duration and response duration and level
         
         return 'File successfully received and processed! on file: ' + file_path
     

@@ -7,7 +7,7 @@ import os
 def get_audio_from_text(text, file_path):
     tts = gTTS(text=text, lang='en', slow=False)  # You can specify the language here
     tts.save(file_path)
-    return tts
+    # return tts
 
 ###### TEXT to SPEECH with Coqui.ai TTS
 """ https://github.com/coqui-ai/TTS/tree/dev#installation """

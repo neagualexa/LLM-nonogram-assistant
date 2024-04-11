@@ -5,10 +5,11 @@ import time
 import os
 import requests
 
-# Accepted file formats: wav, ogg, flac
-# pipeline_file = "./samples/pipeline.wav"
+# azure
+import azure.azure_stt as azure_stt
+import azure.azure_tts as azure_tts
 
-# url = 'http://localhost:5000/process'
+use_azure = True
 
 def speech_pipeline(file_path):
     print("Speech Pipeline...")
@@ -16,7 +17,11 @@ def speech_pipeline(file_path):
     wait_until_file_exists(file_path)
     
     # wav file expected
-    transcription = speech_to_text.transcribe_audio(file_path)
+    if use_azure:
+        transcription = azure_stt.recognise_speech(file_path)           # azure STT
+    else:
+        transcription = speech_to_text.transcribe_audio(file_path)    # local STT
+    
     print("Transcription of original: ", transcription)
     
     print("Passing to LLM...") 
@@ -32,10 +37,12 @@ def speech_pipeline(file_path):
     
     output_file_path = "."+file_path.split(".")[1] + "_response.wav"
     print("Output file: ", output_file_path, " from ", file_path)
-    speech = text_to_speech.get_audio_from_text(llm_response, output_file_path)  ## TESTING - works on ubuntu not on langchain image
-    
-    audio_functions.convert_to_standard_wav(output_file_path) # google tts does not save as standard wav
-    audio_functions.play_audio(output_file_path)
+    if use_azure:
+        azure_tts.vocalise_text(llm_response)                               # azure TTS (audio file not generated)
+    else:  
+        text_to_speech.get_audio_from_text(llm_response, output_file_path)  # local TTS
+        audio_functions.convert_to_standard_wav(output_file_path)           # google tts does not save as standard wav
+        audio_functions.play_audio(output_file_path)
     
     # HTTP POST request to share the audio file to a server IP
     # print("Sharing transcript and audio to server...")
@@ -49,15 +56,19 @@ def verbalise_hint(hint_text, counter):
     # text to speech
     output_file_path = "./speech_pipeline/verbal_hints/hint_" + str(counter) + ".wav"
     print("Output file: ", output_file_path)
-    speech = text_to_speech.get_audio_from_text(hint_text, output_file_path)  ## TESTING - works on ubuntu not on langchain image
-    
-    audio_functions.convert_to_standard_wav(output_file_path) # google tts does not save as standard wav
-    audio_functions.play_audio(output_file_path)
-    
+    if use_azure:
+        azure_tts.vocalise_text(hint_text, output_file_path)                                  # azure TTS (audio file not generated)
+    else:
+        text_to_speech.get_audio_from_text(hint_text, output_file_path)     # local TTS
+        audio_functions.convert_to_standard_wav(output_file_path) # google tts does not save as standard wav
+        audio_functions.play_audio(output_file_path)
+
     # HTTP POST request to share the audio file to a server IP
     # print("Sharing hint audio to server...")
     # share_transcript_audio(hint_text, url, output_file_path)            # sending hint TRANSCRIPT and
-        
+    audio_duration = audio_functions.get_audio_duration(output_file_path)
+    return audio_duration
+
 def connect_to_llm(transcription):
     """ 
         Connect to LLM 
@@ -76,7 +87,6 @@ def connect_to_llm(transcription):
     llm_response = response.text
     # print("LLM response: ", llm_response)
     return llm_response
-    
     
 def wait_until_file_exists(file_path):
     """

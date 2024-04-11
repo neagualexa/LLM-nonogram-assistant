@@ -37,9 +37,9 @@ staticfiles/
 
 # Models GGUF folder and azure files
 models/
-azure/
 models/*
-azure/*
+azure/LLM_calls/
+speech_pipeline/azure/azurecredentials.py
 
 # run files
 run.bash

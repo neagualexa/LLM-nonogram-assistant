@@ -49,3 +49,7 @@ def play_audio(file_name):
 
     pygame.mixer.quit()
     pygame.quit()
+    
+def get_audio_duration(file_path):
+    audio = AudioSegment.from_file(file_path)
+    return audio.duration_seconds
