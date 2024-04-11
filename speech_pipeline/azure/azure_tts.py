@@ -11,7 +11,7 @@ def vocalise_text(text, output_file_path=None):
     speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
 
     # Set the voice name, refer to https://aka.ms/speech/voices/neural for full list.
-    speech_config.speech_synthesis_voice_name = "en-GB-OliviaNeural" #(GB) SoniaNeural OliviaNeural
+    speech_config.speech_synthesis_voice_name = "en-GB-SoniaNeural" #(GB) SoniaNeural OliviaNeural
 
     # Creates a speech synthesizer using the default speaker as audio output.
     speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
@@ -40,3 +40,6 @@ def vocalise_text(text, output_file_path=None):
         with open(output_file_path, "wb") as audio_file:
             audio_data = result.audio_data
             audio_file.write(audio_data)
+
+if __name__ == "__main__":           
+    vocalise_text("Hello, I am a text-to-speech service. I turn text into spoken words.")

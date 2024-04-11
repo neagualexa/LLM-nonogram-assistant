@@ -79,7 +79,11 @@ def callLLM(user_message, past_messages=[]):
         # print("response:: ", response)
         # return response
         # return "test response"
-        return component_pipeline_query_hf(system_message +'\nUser question:'+ user_message, 20) # FREE HF inference (FOR TESTING) # TODO: adapt to implement the memory/systemprompt
+        
+        # FREE HF inference (FOR TESTING)
+        response = component_pipeline_query_hf(system_message +'\nUser:'+ user_message, 50)  # TODO: adapt to implement the memory/systemprompt
+        return response.split("NonoAI:")[1].split("User:")[0]
+    
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 
@@ -132,7 +136,7 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             # print("wrong_selections:: ", wrong_selections)
             # print("missing_selections:: ", missing_selections)
             random_position = random_element(wrong_selections, missing_selections)
-            # print("random_position:: ", random_position)
+            print("random_position:: ", random_position)
             
             #           Describe the position in simple natural language
             position_description = describe_point_position(random_position, width, height)
@@ -148,13 +152,13 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             #           Use the position to observe the surroundings
             system_message_observation = system_prompt_observe_around(height, width, random_position, positioning_response, solutionCellStates)
             # print("system_message_observation:: ", system_message_observation)
-            observation_response_prev = (component_pipeline_query_hf(system_message_observation, 50))
+            observation_response_prev = (component_pipeline_query_hf(system_message_observation, 100))
             observation_response = filter_crop_llm_response(observation_response_prev)
             print("observation LLM:: "+ observation_response + '\n||\n' + observation_response_prev)
             
             #           Use the observation and position description to give feedback
             system_message_hint = system_prompt_hint(positioning_response, observation_response)
-            hint_response = filter_crop_llm_response(component_pipeline_query_hf(system_message_hint, 100))
+            hint_response = filter_crop_llm_response(component_pipeline_query_hf(system_message_hint, 70))
             print("hint LLM:: ", hint_response)
             end_time = time.time()
             latency = end_time - start_time
