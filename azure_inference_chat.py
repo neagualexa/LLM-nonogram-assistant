@@ -117,6 +117,15 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
         else:
             #### Using Azure LLM to generate a response from scratch
             # wrong_selections_sentences, missing_selections_sentences = generate_mistake_markers(differences)
+            
+            # TODO: testing reformat print
+            # print("solutionCellStates:: ", solutionCellStates)
+            # _, sol = (print_format_cellStates(cellStates, solutionCellStates, indeces=False))
+            # print("sol:: ", sol)
+            # # print each element of sol on new line
+            # for s in sol:
+            #     print(s)
+            
             _, solutionCellStates = print_format_cellStates(cellStates, solutionCellStates)
             # system_message = system_prompt(cellStates, solutionCellStates, levelMeaning, height, width, wrong_selections_sentences, missing_selections_sentences)
             
@@ -167,7 +176,7 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             return hint_response
             # system_message = system_message_hint  
 
-        # # return "test response"
+        # return "test response"
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
 

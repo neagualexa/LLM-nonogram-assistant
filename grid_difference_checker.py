@@ -24,30 +24,63 @@ def reformat_cellStates(cellStates, solutionCellStates):
         
     return formatted_grid, formatted_Solution_grid, width, height
 
-def print_format_cellStates(cellStates, solutionCellStates):
+def print_format_cellStates(cellStates, solutionCellStates, indeces=True):
     """
         At every | character, add a new line
     """
     
-    formatted_grid = ["(     0 1 2 3 4 5 6 7 8 9)"]
-    formatted_Solution_grid = ["(     1 2 3 4 5 6 7 8 9 10)"]
+    if indeces:
+        formatted_grid = ["(     0 1 2 3 4 5 6 7 8 9)"]
+        formatted_Solution_grid = ["(     1 2 3 4 5 6 7 8 9 10)"]
 
-    for i, row in enumerate(cellStates):
-        if i >= 9:
-            formatted_row = f"[({i+1}) " + " ".join(row) + "]"
-        else:
-            formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
-        formatted_grid.append(formatted_row)
-    for i, row in enumerate(solutionCellStates):
-        if i >= 9:
-            formatted_row = f"[({i+1}) " + " ".join(row) + "]"
-        else:
-            formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
-        formatted_Solution_grid.append(formatted_row)
+        for i, row in enumerate(cellStates):
+            if i >= 9:
+                formatted_row = f"[({i+1}) " + " ".join(row) + "]"
+            else:
+                formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
+            formatted_grid.append(formatted_row)
+        for i, row in enumerate(solutionCellStates):
+            if i >= 9:
+                formatted_row = f"[({i+1}) " + " ".join(row) + "]"
+            else:
+                formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
+            formatted_Solution_grid.append(formatted_row)
+            
+        formatted_output = "\n".join(formatted_grid)
+        formatted_solution = "\n".join(formatted_Solution_grid)
+        return formatted_output, formatted_solution
+    
+    else:
+        # count consecutive cells and set the elements as indeces of rows and columns
+        row_counts, col_counts = count_consecutive_cells(solutionCellStates)
+        formatted_grid          = ["("+ " ".join(str(col_counts[i]) for i in range(len(cellStates[0]))) + ")"]
+        formatted_Solution_grid = ["(" + " ".join(str(col_counts[i]) for i in range(len(solutionCellStates[0]))) + ")"]
+            
+        for i, row in enumerate(cellStates):
+            formatted_row = f"[({row_counts[i]}) " + " ".join(row) + "]"
+            formatted_grid.append(formatted_row)
+        for i, row in enumerate(solutionCellStates):
+            formatted_row = f"[({row_counts[i]}) " + " ".join(row) + "]"
+            formatted_Solution_grid.append(formatted_row)
         
-    formatted_output = "\n".join(formatted_grid)
-    formatted_solution = "\n".join(formatted_Solution_grid)
-    return formatted_output, formatted_solution
+        return formatted_grid, formatted_Solution_grid
+    
+        #### Reformat by maximising whitespaces
+        # ws_grid = []
+        # ws_sol_grid = []
+        # # Find the maximum length of elements in each column
+        # max_lengths = [max(len(str(cell)) for cell in col) for col in zip(*formatted_grid)]
+        # max_lengths_sol = [max(len(str(cell)) for cell in col) for col in zip(*formatted_Solution_grid)]
+
+        # # Print the formatted grid
+        # for row in formatted_grid:
+        #     formatted_row = "  ".join(str(cell).ljust(max_lengths[i] + 2) for i, cell in enumerate(row))
+        #     ws_grid.append(formatted_row)
+        # for row in formatted_Solution_grid:
+        #     formatted_row = "  ".join(str(cell).ljust(max_lengths_sol[i] + 2) for i, cell in enumerate(row))
+        #     ws_sol_grid.append(formatted_row)
+    
+        # return ws_grid, ws_sol_grid
 
 def compare_grids(user_progress, solution):
     differences = {
@@ -144,3 +177,36 @@ def describe_point_position(position, width, height):
     description.append( f"{col_desc}")
     
     return random.choice(description)
+
+def count_consecutive_cells(grid):
+    row_counts = []
+    col_counts = []
+
+    def calculate_group_counts(array):
+        group_counts = []
+        count = 0
+        for cell in array:
+            if cell == '1':
+                count += 1
+            elif count > 0:
+                group_counts.append(count)
+                count = 0
+                
+        if count > 0:
+            group_counts.append(count)
+        elif group_counts == []:
+            group_counts.append(count)
+        return group_counts
+
+    # Count consecutive 1s in each row
+    for row in grid:
+        row_counts.append(calculate_group_counts(row))
+
+    # Transpose the grid to count consecutive 1s in each column
+    transposed_grid = [[grid[j][i] for j in range(len(grid))] for i in range(len(grid[0]))]
+
+    # Count consecutive 1s in each column (same logic as for rows)
+    for col in transposed_grid:
+        col_counts.append(calculate_group_counts(col))
+
+    return row_counts, col_counts
