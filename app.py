@@ -142,6 +142,19 @@ def check_puzzle_progress():
     # return redirect('/')
     return response_llm
 
+@app.route('/verbalise_hint', methods=['POST'])
+def verbalise_hint():
+    hint = json.loads(request.form.get('hint'))
+    try:
+        url = 'http://localhost:5005/verbal_hint'
+        data = {'responseText': hint['hint'], 'counter': 0}
+        response = requests.post(url, data=data)
+        # print("response from verbal_hint:: ", response)
+        return response
+    except Exception as e:
+        print("error in /verbalise_hint connecting to /verbal_hint:: ", e)
+        return "Error in /verbalise_hint connecting to /verbal_hint: " + e
+        
 @app.route('/clear_history')
 def clear_history():
     # Clear all messages from the database

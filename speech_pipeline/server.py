@@ -57,7 +57,7 @@ def ai_hint():
         print("Received request to generate audio for AI response text")
         
         # Get the text from the request
-        pre_text = "Hi! Here is a hint: "
+        pre_text = ""#"Hi! Here is a hint: "
         response_text = request.form['responseText']
         counter = request.form['counter']
         print(counter, pre_text + response_text)
