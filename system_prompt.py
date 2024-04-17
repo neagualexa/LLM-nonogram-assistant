@@ -7,12 +7,18 @@ def system_prompt_positioning(height, width, position, position_description):
 def system_prompt_observe_around(height, width, position, positioning_area, solutionCellStates):
     return sys_observe_around.format(height=height, width=width, position=position, positioning_area=positioning_area, solutionCellStates=solutionCellStates)
 
+def system_prompt_observe_around_llama(height, width, position, positioning_area, solutionCellStates):
+    return sys_observe_around_llama.format(height=height, width=width, position=position, positioning_area=positioning_area, solutionCellStates=solutionCellStates)
+
 def system_prompt_hint(position_description_rephrased, observation):
     return sys_hint.format(position_description_rephrased=position_description_rephrased, observation=observation)
 
+def system_prompt_hint_llama(position_description_rephrased, observation):
+    return sys_hint_llama.format(position_description_rephrased=position_description_rephrased, observation=observation)
+
 ######### System Prompts #########
 # receives simple descriptions of the location of a point in a grid and rephrases them
-sys_positioning = """Your task is to rephrase the description of the location of a cell in a grid. Rephrase the description in a concise and clear manner. Focus on providing a similar description using different words or phrases and formulate a sentence. 
+sys_positioning = """Your task is to rephrase the description of the location of a cell in a {height}x{width} grid. Rephrase the description in a concise and clear manner. Focus on providing a similar description using different words or phrases and formulate a sentence. 
 Only complete the Rephrased Description Sentence section.
 
 Description : '{position_description}'
@@ -21,18 +27,40 @@ Rephrased Description Sentence: '"""
 # Position (x, y): {position}
 
 sys_observe_around = """You are observing a 2D grid of size {height}x{width}. The grid is represented by a binary data set where 0 represents an empty cell and 1 represents a filled cell. The grid is 1-indexed, meaning the first row and column are indexed as 1. 
-Observe the cells around the position (x, y) and describe the contents of cells in the surrounding area. Use terms such as 'empty', 'filled'.
+Observe the cells around the position and describe the contents of cells in the surrounding area. Use terms such as 'empty', 'filled'.
 
 Under Observation section, return a string describing the contents of the surrounding cells. Use words like "should", "might". 
 
-Do not return the position (x, y) of the cell and the exact grid.
+Do not return the exact position of the cell and the exact grid.
 Only complete the Observation section.
 
-(x,y):{position}
+Position of cell: {position}
 Surronding Area: '{positioning_area}'
 Grid:
 {solutionCellStates}
 Observation: '"""
+
+sys_observe_around_llama = """You are observing a 2D grid of size {height}x{width}. The grid is represented by a binary data set where 0 represents an empty cell and 1 represents a filled cell. The grid is 1-indexed, meaning the first row and column are indexed as 1. 
+Observe the cells in the surrounding area, describe them as 'empty' or 'filled'.
+
+The grid you receive is the solution, so use words like "should", "might" when describing the contents of the surrounding cells. 
+The first row and column intersect in the bottom left corner of the grid.
+
+Do not return the exact grid.
+Only complete the Observation section.
+
+Surronding Area: '{positioning_area}'
+Grid:
+{solutionCellStates}"""
+# Position of cell: {position}
+
+sys_hint_llama = """You're NonoAI, an assistant helping the user in solving a Griddler (or Nonogram) puzzle, which is a type of logic puzzle. In a Nonogram puzzle, the goal is to fill in cells in a grid to create a picture or pattern. The numbers on the top & left sides of the grid indicate how many consecutive filled cells there are in each row or column, separated by at least one empty cell. The completed grid reveals a hidden image or pattern.
+
+Explain the errors and suggest corrective actions based on the observation and location area of the mistake. Your assistance should aim to improve the user's understanding of the puzzle mechanics and help them apply effective solving strategies. Focus on providing a clear direction to help the user make strategic decisions towards solving the puzzle successfully. Avoid giving direct solutions or overly complex explanations. 
+
+Location area of mistake: '{position_description_rephrased}'
+Observation: '{observation}'"""
+# Your goal is to provide a helpful hint based on the known location of the mistake and the observation describing that location area. 
 
 sys_hint = """You're NonoAI, an assistant helping the user in solving a nonogram puzzle, which is a type of logic puzzle. In a nonogram puzzle, the goal is to fill in cells in a grid to create a picture or pattern. The numbers on the top & left sides of the grid indicate how many consecutive filled cells there are in each row or column, separated by at least one empty cell. The completed grid reveals a hidden image or pattern.
 

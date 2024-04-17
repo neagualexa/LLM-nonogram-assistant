@@ -7,15 +7,17 @@ from langchain_community.llms.azureml_endpoint import (
     AzureMLOnlineEndpoint,
     ContentFormatterBase
 )
-from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around, system_prompt_hint
+from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around, system_prompt_hint, system_prompt_hint_llama, system_prompt_observe_around_llama
 from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
 from puzzle_checker_inference import component_pipeline_query_hf
 '''
 HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
+https://learn.microsoft.com/en-us/azure/machine-learning/how-to-deploy-models-llama?view=azureml-api-2
+Only for chat models
 '''
 
-API_URL = azurecredentials.api_url
-API_KEY = azurecredentials.key
+API_URL = azurecredentials.api_url_70
+API_KEY = azurecredentials.key_70
 
 system_message = "You are NonoAI, a helpful assistant replying the user's questions. Reply in short sentences."
 # system_message = """You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
@@ -46,12 +48,12 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
                 "max_tokens": model_kwargs.get("max_tokens"),
             }
         )
-        print("request_payload:: ", request_payload)
+        # print("request_payload:: ", request_payload)
         return str.encode(request_payload)
 
     def format_response_payload(self, output: bytes) -> str:
         """Formats response"""
-        print("output:: ", output)
+        # print("output:: ", output)
         return json.loads(output)["choices"][0]["message"]["content"]
     
 # NOTES:
@@ -73,11 +75,11 @@ llm = AzureMLOnlineEndpoint(
 def callLLM(user_message, past_messages=[]):
     
     try:
-        llm.model_kwargs["history"] = past_messages
+        # llm.model_kwargs["history"] = past_messages
         llm.model_kwargs["system_message"] = system_message
-        # response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
-        # print("response:: ", response)
-        # return response
+        response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
+        print("response:: ", response)
+        return response
         # return "test response"
         
         # FREE HF inference (FOR TESTING)
@@ -123,8 +125,6 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             
 
             # print("system_message:: ", system_message)
-            user_message = "Level Check Pipeline"
-            llm.model_kwargs["max_tokens"] = 100
             
             #### Using sub component LLMs to generate a response
             start_time = time.time() 
@@ -143,24 +143,59 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             position_description = describe_point_position(random_position, width, height)
             print("Backend position description:: ", position_description)
             
-            #           Formulate a phrase describing the position
+            #     1      Formulate a phrase describing the position
             system_message_positioning = system_prompt_positioning(height, width, random_position, position_description)
             # print("system_message:: ", system_message_positioning)
             positioning_response_prev = (component_pipeline_query_hf(system_message_positioning, 20))
             positioning_response = filter_crop_llm_response(positioning_response_prev)
             print("positioning LLM:: ", positioning_response)
             
-            #           Use the position to observe the surroundings
+            #     1      Formulate a phrase describing the position using Azure LLM
+            # user_message = "Tell me where the location is in the grid. Start with 'Rephrased:'."
+            # llm.model_kwargs["max_tokens"] = 50
+            # system_message_positioning = system_prompt_positioning(height, width, random_position, position_description)
+            # llm.model_kwargs["system_message"] = system_message_positioning
+            # # llm.model_kwargs["history"] = past_messages
+            # positioning_response = llm.invoke(input=user_message)
+            # print("positioning LLM:: ", positioning_response)
+            # positioning_response = positioning_response.split("Rephrased:")[1]
+            # print("positioning LLM:: ", positioning_response)
+            
+            #    2       Use the position to observe the surroundings
             system_message_observation = system_prompt_observe_around(height, width, random_position, positioning_response, solutionCellStates)
             # print("system_message_observation:: ", system_message_observation)
             observation_response_prev = (component_pipeline_query_hf(system_message_observation, 100))
             observation_response = filter_crop_llm_response(observation_response_prev)
-            print("observation LLM:: "+ observation_response + '\n||\n' + observation_response_prev)
+            print("observation LLM:: "+ observation_response)
             
-            #           Use the observation and position description to give feedback
-            system_message_hint = system_prompt_hint(positioning_response, observation_response)
-            hint_response = filter_crop_llm_response(component_pipeline_query_hf(system_message_hint, 70))
-            print("hint LLM:: ", hint_response)
+            #     2     Use the position to observe the surroundings using HuggingFace
+            # user_message = "Tell me about the cells in the vicinity. Start with 'Observation:'."
+            # llm.model_kwargs["max_tokens"] = 100
+            # system_message_observation = system_prompt_observe_around_llama(height, width, random_position, positioning_response, solutionCellStates)
+            # llm.model_kwargs["system_message"] = system_message_observation
+            # # llm.model_kwargs["history"] = past_messages
+            # observation_response = llm.invoke(input=user_message)
+            # print("observation LLM:: "+ observation_response)
+            # observation_response = observation_response.split("Observation:")[1]
+            # print("observation LLM:: "+ observation_response)
+            
+            #     3      Use the observation and position description to give feedback using HuggingFace
+            # system_message_hint = system_prompt_hint(positioning_response, observation_response)
+            # print("system_message_hint:: ", system_message_hint)
+            # hint_response = filter_crop_llm_response(component_pipeline_query_hf(system_message_hint, 70))
+            # print("HF - hint LLM:: ", hint_response)
+            
+            #     3      Use the observation and position description to give feedback using Azure LLM
+            user_message = "Give me a hint in 1-2 sentences based on the observation. Start with 'Hint:'."
+            llm.model_kwargs["max_tokens"] = 50
+            system_message_hint = system_prompt_hint_llama(positioning_response, observation_response)
+            llm.model_kwargs["system_message"] = system_message_hint
+            # llm.model_kwargs["history"] = past_messages
+            hint_response = llm.invoke(input=user_message)
+            # print("Llama2 - hint LLM:: ", hint_response)
+            hint_response = ".".join(hint_response.split("Hint:")[1].split(".")[:-1])+"." # removing the last unfinished sentence
+            print("Llama2 - hint LLM:: ", hint_response)
+            
             end_time = time.time()
             latency = end_time - start_time
             print(f"Overall LLM pipeline Latency: {latency} seconds")

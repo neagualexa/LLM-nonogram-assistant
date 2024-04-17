@@ -166,8 +166,8 @@ def describe_point_position(position, width, height):
     description.append( f"{row_desc} rows, {col_desc} columns")
     description.append( f"{row_desc}, {col_desc} side")
     description.append( f"{row_desc}, {col_desc} area")
-    description.append( f"{row_desc}")
-    description.append( f"{col_desc}")
+    # description.append( f"{row_desc}")
+    # description.append( f"{col_desc}")
     
     return random.choice(description)
 
