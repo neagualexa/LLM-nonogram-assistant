@@ -24,63 +24,56 @@ def reformat_cellStates(cellStates, solutionCellStates):
         
     return formatted_grid, formatted_Solution_grid, width, height
 
-def print_format_cellStates(cellStates, solutionCellStates, indeces=True):
+def print_format_cellStates(cellStates, solutionCellStates):
     """
         At every | character, add a new line
     """
     
-    if indeces:
-        formatted_grid = ["(     0 1 2 3 4 5 6 7 8 9)"]
-        formatted_Solution_grid = ["(     1 2 3 4 5 6 7 8 9 10)"]
+    # if indices:
+    formatted_grid = ["(     0 1 2 3 4 5 6 7 8 9)"]
+    formatted_Solution_grid = ["(     1 2 3 4 5 6 7 8 9 10)"]
 
-        for i, row in enumerate(cellStates):
-            if i >= 9:
-                formatted_row = f"[({i+1}) " + " ".join(row) + "]"
-            else:
-                formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
-            formatted_grid.append(formatted_row)
-        for i, row in enumerate(solutionCellStates):
-            if i >= 9:
-                formatted_row = f"[({i+1}) " + " ".join(row) + "]"
-            else:
-                formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
-            formatted_Solution_grid.append(formatted_row)
-            
-        formatted_output = "\n".join(formatted_grid)
-        formatted_solution = "\n".join(formatted_Solution_grid)
-        return formatted_output, formatted_solution
-    
-    else:
-        # count consecutive cells and set the elements as indeces of rows and columns
-        row_counts, col_counts = count_consecutive_cells(solutionCellStates)
-        formatted_grid          = ["("+ " ".join(str(col_counts[i]) for i in range(len(cellStates[0]))) + ")"]
-        formatted_Solution_grid = ["(" + " ".join(str(col_counts[i]) for i in range(len(solutionCellStates[0]))) + ")"]
-            
-        for i, row in enumerate(cellStates):
-            formatted_row = f"[({row_counts[i]}) " + " ".join(row) + "]"
-            formatted_grid.append(formatted_row)
-        for i, row in enumerate(solutionCellStates):
-            formatted_row = f"[({row_counts[i]}) " + " ".join(row) + "]"
-            formatted_Solution_grid.append(formatted_row)
+    for i, row in enumerate(cellStates):
+        if i >= 9:
+            formatted_row = f"[({i+1}) " + " ".join(row) + "]"
+        else:
+            formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
+        formatted_grid.append(formatted_row)
+    for i, row in enumerate(solutionCellStates):
+        if i >= 9:
+            formatted_row = f"[({i+1}) " + " ".join(row) + "]"
+        else:
+            formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
+        formatted_Solution_grid.append(formatted_row)
         
-        return formatted_grid, formatted_Solution_grid
+    formatted_output = "\n".join(formatted_grid)
+    formatted_solution = "\n".join(formatted_Solution_grid)
+    return formatted_output, formatted_solution
     
-        #### Reformat by maximising whitespaces
-        # ws_grid = []
-        # ws_sol_grid = []
-        # # Find the maximum length of elements in each column
-        # max_lengths = [max(len(str(cell)) for cell in col) for col in zip(*formatted_grid)]
-        # max_lengths_sol = [max(len(str(cell)) for cell in col) for col in zip(*formatted_Solution_grid)]
-
-        # # Print the formatted grid
-        # for row in formatted_grid:
-        #     formatted_row = "  ".join(str(cell).ljust(max_lengths[i] + 2) for i, cell in enumerate(row))
-        #     ws_grid.append(formatted_row)
-        # for row in formatted_Solution_grid:
-        #     formatted_row = "  ".join(str(cell).ljust(max_lengths_sol[i] + 2) for i, cell in enumerate(row))
-        #     ws_sol_grid.append(formatted_row)
-    
-        # return ws_grid, ws_sol_grid
+    # else:
+    ### Too much information for the LLM to accurately understand, it confuses the hints with the actual grid
+    #     # count consecutive cells and set the elements as indices of rows and columns
+    #     row_counts, col_counts = count_consecutive_cells(solutionCellStates)
+    #     str_row_counts = [str(r) for r in row_counts]
+    #     str_col_counts = [str(c) for c in col_counts]
+        
+    #     for r, str_r in zip(row_counts, str_row_counts):
+    #         if len(r) == 1:
+    #             str_row_counts[str_row_counts.index(str_r)] += "      "
+    #         elif len(r) == 2:
+    #             str_row_counts[str_row_counts.index(str_r)] += "   "
+                
+    #     formatted_grid          = ["(         "+ " ".join(str(col_counts[i]) for i in range(len(cellStates[0]))) + ")"]
+    #     formatted_Solution_grid = ["(         " + " ".join(str(col_counts[i]) for i in range(len(solutionCellStates[0]))) + ")"]
+            
+    #     for i, row in enumerate(cellStates):
+    #         formatted_row = f"[{str_row_counts[i]} " + " ".join(row) + "]"
+    #         formatted_grid.append(formatted_row)
+    #     for i, row in enumerate(solutionCellStates):
+    #         formatted_row = f"[{str_row_counts[i]} " + " ".join(row) + "]"
+    #         formatted_Solution_grid.append(formatted_row)
+        
+    #     return formatted_grid, formatted_Solution_grid
 
 def compare_grids(user_progress, solution):
     differences = {
@@ -90,10 +83,10 @@ def compare_grids(user_progress, solution):
     for i in range(len(user_progress)):
         for j in range(len(user_progress[0])):
             if user_progress[i][j] != solution[i][j] and user_progress[i][j] == '1':
-                # columns are x and rows are y; inverted row indeces to have bottom left as (1,1)
+                # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
                 differences["wrong_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
             if user_progress[i][j] != solution[i][j] and user_progress[i][j] == '0':
-                # columns are x and rows are y; inverted row indeces to have bottom left as (1,1)
+                # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
                 differences["missing_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
     return differences
 

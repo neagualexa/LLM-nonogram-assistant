@@ -8,7 +8,7 @@ from langchain_community.llms.azureml_endpoint import (
     ContentFormatterBase
 )
 from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around, system_prompt_hint
-from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position
+from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
 from puzzle_checker_inference import component_pipeline_query_hf
 '''
 HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
@@ -68,7 +68,7 @@ llm = AzureMLOnlineEndpoint(
     model_kwargs={"temperature": 0.8, "max_tokens": 50, "history": [], "system_message": ""},
 )
 
-################ Function call for chat message conversation ################
+################ Function call for chat message conversation ################ TODO: should be removed as not needed anymore
 
 def callLLM(user_message, past_messages=[]):
     
@@ -117,14 +117,6 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
         else:
             #### Using Azure LLM to generate a response from scratch
             # wrong_selections_sentences, missing_selections_sentences = generate_mistake_markers(differences)
-            
-            # TODO: testing reformat print
-            # print("solutionCellStates:: ", solutionCellStates)
-            # _, sol = (print_format_cellStates(cellStates, solutionCellStates, indeces=False))
-            # print("sol:: ", sol)
-            # # print each element of sol on new line
-            # for s in sol:
-            #     print(s)
             
             _, solutionCellStates = print_format_cellStates(cellStates, solutionCellStates)
             # system_message = system_prompt(cellStates, solutionCellStates, levelMeaning, height, width, wrong_selections_sentences, missing_selections_sentences)
