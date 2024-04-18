@@ -5,11 +5,12 @@ import requests
 import json
 # from old.huggingface_inference import query as callLLM  # hugging face llms
 # from old.llm_local import callLLM                       # local gguf file llm
-# from old.azure_inference import callLLM                 # azure llm but pure http requests
-from azure_inference_chat import callLLM, callLLM_progress_checker                # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
-# from azure_inference import callLLM_progress_checker                            # azure llm non chat
+# from old.azure_inference_http import callLLM            # azure llm but pure http requests
+from azure_inference_chat import callAzureLLM, callLLM_progress_checker                # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
+# from old.azure_inference import callLLM_progress_checker                            # azure llm non chat
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
+from data_collection import csv_handler_progress, csv_handler_meaning
 
 app = Flask(__name__)
 
@@ -52,7 +53,7 @@ def send_message():
     print('user_message:: ', user_message)
     
     ############################################## call LLM for response
-    response = callLLM(user_message, messages_cache)
+    response, _ = callAzureLLM(user_message, messages_cache)
     #####
     # url = 'http://127.0.0.1:5001/predict'
     # data = {'input_data': user_message}
@@ -91,8 +92,16 @@ def check_puzzle_meaning():
     puzzle_meaning = json.loads(puzzle_meaning)
     user_guess = puzzle_meaning['user_guess']
     solution = puzzle_meaning['solution']
+    username = puzzle_meaning['username']
+    level = puzzle_meaning['level']
     
-    response = meaning_checker_hf(user_guess, solution)
+    response, meaning_latency = meaning_checker_hf(user_guess, solution)
+    
+    # Save the data to the CSV database
+    count_entries = len(csv_handler_meaning.read_entries())
+    new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Meaning': solution, 'Guess': user_guess, 'Approved': response, 'Model': 'HF LaMini-Flan-T5-783M', 'Latency': meaning_latency, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    csv_handler_meaning.add_entry(new_entry)
+    
     return response
 
 @app.route('/check_puzzle_progress', methods=['POST'])
@@ -106,8 +115,14 @@ def check_puzzle_progress():
     solutionCellStates = puzzle_progress['solutionCellStates']
     completed = True if puzzle_progress['completed'].lower() == "true" else False
     levelMeaning = puzzle_progress['levelMeaning']
+    username = puzzle_progress['username']
+    level = puzzle_progress['level']
     
-    # print("cellStates:: ", cellStates, "solutionCellStates:: ", solutionCellStates, "completed:: ", completed, "levelMeaning:: ", levelMeaning)
+    ##### Save the data to the CSV Progress database
+    if not completed:
+        count_entries = len(csv_handler_progress.read_entries())
+        new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test',  'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        csv_handler_progress.add_entry(new_entry)
     ############################################## call LLM for response
     response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, messages_cache)
     #####

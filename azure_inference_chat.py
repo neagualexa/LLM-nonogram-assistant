@@ -10,6 +10,7 @@ from langchain_community.llms.azureml_endpoint import (
 from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around, system_prompt_hint, system_prompt_hint_llama, system_prompt_observe_around_llama
 from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
 from puzzle_checker_inference import component_pipeline_query_hf
+from data_collection import csv_handler_progress
 '''
 HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
 https://learn.microsoft.com/en-us/azure/machine-learning/how-to-deploy-models-llama?view=azureml-api-2
@@ -18,6 +19,9 @@ Only for chat models
 
 API_URL = azurecredentials.api_url_70
 API_KEY = azurecredentials.key_70
+hint_model          = "Azure Lama 2 70b chat"
+observation_model   = "HF Mixtral-8x7B-Instruct-v0.1"
+position_model      = "HF Mixtral-8x7B-Instruct-v0.1"
 
 system_message = "You are NonoAI, a helpful assistant replying the user's questions. Reply in short sentences."
 # system_message = """You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
@@ -70,21 +74,27 @@ llm = AzureMLOnlineEndpoint(
     model_kwargs={"temperature": 0.8, "max_tokens": 50, "history": [], "system_message": ""},
 )
 
-################ Function call for chat message conversation ################ TODO: should be removed as not needed anymore
+################ Function call for chat message with Azure ################
 
-def callLLM(user_message, past_messages=[]):
+def callAzureLLM(user_message, system_message=system_message, max_tokens=100, past_messages=[]):
     
     try:
+        start_time = time.time() 
         # llm.model_kwargs["history"] = past_messages
         llm.model_kwargs["system_message"] = system_message
+        llm.model_kwargs["max_tokens"] = max_tokens
         response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
         print("response:: ", response)
-        return response
+        
+        end_time = time.time()
+        overall_latency = end_time - start_time
+        print(f"Azure LLM Latency: {overall_latency} seconds")
+        return response, overall_latency
         # return "test response"
         
-        # FREE HF inference (FOR TESTING)
-        response = component_pipeline_query_hf(system_message +'\nUser:'+ user_message, 50)  # TODO: adapt to implement the memory/systemprompt
-        return response.split("NonoAI:")[1].split("User:")[0]
+        # # FREE HF inference (FOR TESTING)
+        # response, _ = component_pipeline_query_hf(system_message +'\nUser:'+ user_message, 50)  # TODO: adapt to implement the memory/systemprompt
+        # return response.split("NonoAI:")[1].split("User:")[0]
     
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
@@ -96,7 +106,7 @@ def callLLM(user_message, past_messages=[]):
 ################ Function call for progress feedback ################
     
 def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, past_messages=[]):
-    
+        
     try:
         cellStates, solutionCellStates, width, height = reformat_cellStates(cellStates, solutionCellStates)
         differences = compare_grids(cellStates, solutionCellStates)
@@ -131,7 +141,7 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             #           Choose a random mistake to talk about
             # system_message_random_pos = system_prompt_random(wrong_selections, missing_selections)
             # print("system_message_random_pos:: ", system_message_random_pos)
-            # random_position_response = component_pipeline_query_hf(system_message_random_pos)
+            # random_position_response, _ = component_pipeline_query_hf(system_message_random_pos)
             # print("random_position LLM:: ", random_position_response)
             # print("cellStates:: ", cellStates)
             # print("wrong_selections:: ", wrong_selections)
@@ -146,7 +156,7 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             #     1      Formulate a phrase describing the position
             system_message_positioning = system_prompt_positioning(height, width, random_position, position_description)
             # print("system_message:: ", system_message_positioning)
-            positioning_response_prev = (component_pipeline_query_hf(system_message_positioning, 20))
+            positioning_response_prev, positioning_latency = (component_pipeline_query_hf(system_message_positioning, 20))
             positioning_response = filter_crop_llm_response(positioning_response_prev)
             print("positioning LLM:: ", positioning_response)
             
@@ -164,7 +174,7 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             #    2       Use the position to observe the surroundings
             system_message_observation = system_prompt_observe_around(height, width, random_position, positioning_response, solutionCellStates)
             # print("system_message_observation:: ", system_message_observation)
-            observation_response_prev = (component_pipeline_query_hf(system_message_observation, 100))
+            observation_response_prev, observation_latency = (component_pipeline_query_hf(system_message_observation, 100))
             observation_response = filter_crop_llm_response(observation_response_prev)
             print("observation LLM:: "+ observation_response)
             
@@ -187,18 +197,20 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             
             #     3      Use the observation and position description to give feedback using Azure LLM
             user_message = "Give me a hint in 1-2 sentences based on the observation. Start with 'Hint:'."
-            llm.model_kwargs["max_tokens"] = 50
             system_message_hint = system_prompt_hint_llama(positioning_response, observation_response)
-            llm.model_kwargs["system_message"] = system_message_hint
-            # llm.model_kwargs["history"] = past_messages
-            hint_response = llm.invoke(input=user_message)
+            hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=50, past_messages=[])
             # print("Llama2 - hint LLM:: ", hint_response)
             hint_response = ".".join(hint_response.split("Hint:")[1].split(".")[:-1])+"." # removing the last unfinished sentence
             print("Llama2 - hint LLM:: ", hint_response)
             
             end_time = time.time()
-            latency = end_time - start_time
-            print(f"Overall LLM pipeline Latency: {latency} seconds")
+            overall_latency = end_time - start_time
+            print(f"Overall LLM pipeline Latency: {overall_latency} seconds")
+            
+            ############ Save CSV entry
+            csv_count_entries = len(csv_handler_progress.read_entries()) - 1
+            new_entry_attributes = {'Position': random_position, 'Hint_Response': hint_response, 'Observation_Response': observation_response, 'Positioning_Response': positioning_response, 'Position_Description': position_description, 'Overall_Latency': overall_latency, 'Hint_Latency': hint_latency, 'Observation_Latency': observation_latency, 'Position_Latency': positioning_latency, 'Hint_Model': hint_model, 'Observation_Model': observation_model, 'Position_Model': position_model}
+            csv_handler_progress.update_entry(csv_count_entries, new_entry_attributes)            
             
             return hint_response
             # system_message = system_message_hint  

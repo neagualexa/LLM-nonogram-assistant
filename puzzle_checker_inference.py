@@ -12,10 +12,10 @@ API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/MBZUAI/LaMini-Fla
 meaning_system_message = "Under Answer section, write 'true' if the user guess is a synonym or describes something similar to the Solution; otherwise, return 'false'. \n"
 
 def meaning_checker_hf(user_message, solution):
-    if user_message.lower() == solution.lower():
-        return "true"
-    if user_message == "":
-        return "false"
+    # if user_message.lower() == solution.lower():
+    #     return "true", 0
+    if user_message == "" or user_message == "Enter...": # should never be reached as this check is done in Unity
+        return "false", -1
     message = f"""User guess: {user_message} \nSolution: {solution} \nAnswer:"""
     context = meaning_system_message + message
 
@@ -35,11 +35,11 @@ def meaning_checker_hf(user_message, solution):
     
     if 'error' in result:
         print("error:: ", result)
-        return "error"
-    print(result)
+        return "error", -1
+    # print(result)
     result = filter_crop_llm_response(result[0]['generated_text'])
     print(result)
-    return result
+    return result, latency
 
 # API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
@@ -70,8 +70,8 @@ def component_pipeline_query_hf(system_prompt, max_new_tokens):
     # print(result)
     if 'error' in result:
         print("error:: ", result)
-        return "error"
-    return result[0]['generated_text']
+        return "error", -1
+    return result[0]['generated_text'], latency
 
 def filter_crop_llm_response(response):
     # only accept the sentence between the first ':' and '\n' 
@@ -84,7 +84,7 @@ def filter_crop_llm_response(response):
 if __name__ == "__main__":
     user_message = "brown drink"
     solution = "coffee"
-    response = meaning_checker_hf(user_message, solution)
+    response, _ = meaning_checker_hf(user_message, solution)
     print("response:: ", response)
     
   

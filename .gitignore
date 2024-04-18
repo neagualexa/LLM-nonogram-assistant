@@ -52,3 +52,6 @@ index/*
 conversation/
 conversation/*
 verbal_hints/
+
+# User Data 
+data/
