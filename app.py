@@ -10,7 +10,7 @@ from azure_inference_chat import callAzureLLM, callLLM_progress_checker         
 # from old.azure_inference import callLLM_progress_checker                            # azure llm non chat
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
-from data_collection import csv_handler_progress, csv_handler_meaning
+from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game
 
 app = Flask(__name__)
 
@@ -113,7 +113,7 @@ def check_puzzle_progress():
     puzzle_progress = json.loads(puzzle_progress)
     cellStates = puzzle_progress['cellStates']
     solutionCellStates = puzzle_progress['solutionCellStates']
-    completed = True if puzzle_progress['completed'].lower() == "true" else False
+    completed = True if puzzle_progress['completed'].lower() == "true" else False # convert to boolean
     levelMeaning = puzzle_progress['levelMeaning']
     username = puzzle_progress['username']
     level = puzzle_progress['level']
@@ -183,6 +183,20 @@ def clear_history():
     messages_cache = []
 
     return redirect('/')
+
+@app.route('/end_game', methods=['POST'])
+def save_game():
+    userGameData = request.form.get('EndGameData').lower() # lower() to avoid case sensitivity between boolean in python and c#
+    # print("userGameData:: ", userGameData)
+    userGameData = json.loads(userGameData)
+    levels_data = userGameData['levels_data']
+    for i in range(len(levels_data)):
+        level_data = levels_data[str(i)]
+        new_entry = {'id': len(csv_handler_game.read_entries()), 'User': userGameData['username'], 'Level': level_data['level'], 'Completed': level_data['level_completed'], 'onTime': level_data['on_time'], 'Duration': level_data['time'], 'Meaning_Completed': level_data['meaning_completed'], 'Nb_Hints_Used': level_data['nb_hints_used'], 'Nb_Mistakes_per_Hint': level_data['nb_mistakes_per_hint'], 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        print("new_entry:: ", new_entry)
+        csv_handler_game.add_entry(new_entry)
+        
+    return "Game data saved successfully!"
 
 def format_message(message):
     formatted_message = [

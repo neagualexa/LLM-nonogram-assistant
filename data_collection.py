@@ -47,11 +47,15 @@ def initialize_csv_database():
     csv_handler_meaning = CSVHandler('data/data_meaning.csv', fieldnames_meaning)
     csv_handler_meaning.initialize_file()
     
-    return csv_handler_progress, csv_handler_meaning
+    fieldnames_game = ['id', 'User', 'Level', 'Completed', 'onTime', 'Duration', 'Meaning_Completed', 'Nb_Hints_Used', 'Nb_Mistakes_per_Hint', 'Timestamp']
+    csv_handler_game = CSVHandler('data/data_game.csv', fieldnames_game)
+    csv_handler_game.initialize_file()
+    
+    return csv_handler_progress, csv_handler_meaning, csv_handler_game
 
 
 # CSV Database Initialization
-csv_handler_progress, csv_handler_meaning = initialize_csv_database()    
+csv_handler_progress, csv_handler_meaning, csv_handler_game = initialize_csv_database()    
     
 # Examples to use the CSVHandler class
     # # Add an entry in MEANING DATA
