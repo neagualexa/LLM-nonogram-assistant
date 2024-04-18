@@ -150,7 +150,7 @@ def verbalise_hint():
         data = {'responseText': hint['hint'], 'counter': 0}
         response = requests.post(url, data=data)
         # print("response from verbal_hint:: ", response)
-        return response
+        return "Hint successfully verbalised!"
     except Exception as e:
         print("error in /verbalise_hint connecting to /verbal_hint:: ", e)
         return "Error in /verbalise_hint connecting to /verbal_hint: " + e
