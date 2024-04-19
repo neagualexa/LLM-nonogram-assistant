@@ -121,7 +121,7 @@ def check_puzzle_progress():
     ##### Save the data to the CSV Progress database
     if not completed:
         count_entries = len(csv_handler_progress.read_entries())
-        new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test',  'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
     ############################################## call LLM for response
     response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, messages_cache)
@@ -192,7 +192,7 @@ def save_game():
     levels_data = userGameData['levels_data']
     for i in range(len(levels_data)):
         level_data = levels_data[str(i)]
-        new_entry = {'id': len(csv_handler_game.read_entries()), 'User': userGameData['username'], 'Level': level_data['level'], 'Completed': level_data['level_completed'], 'onTime': level_data['on_time'], 'Duration': level_data['time'], 'Meaning_Completed': level_data['meaning_completed'], 'Nb_Hints_Used': level_data['nb_hints_used'], 'Nb_Mistakes_per_Hint': level_data['nb_mistakes_per_hint'], 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        new_entry = {'id': len(csv_handler_game.read_entries()), 'User': userGameData['username'], 'Level': level_data['level'], 'Completed': level_data['level_completed'], 'onTime': level_data['on_time'], 'Duration': level_data['time'], 'Meaning_Completed': level_data['meaning_completed'], 'Nb_Hints_Used': level_data['nb_hints_used'], 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         print("new_entry:: ", new_entry)
         csv_handler_game.add_entry(new_entry)
         

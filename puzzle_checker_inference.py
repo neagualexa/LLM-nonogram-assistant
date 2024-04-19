@@ -35,7 +35,7 @@ def meaning_checker_hf(user_message, solution):
     
     if 'error' in result:
         print("error:: ", result)
-        return "error", -1
+        return "HF error", -1
     # print(result)
     result = filter_crop_llm_response(result[0]['generated_text'])
     print(result)
@@ -70,7 +70,7 @@ def component_pipeline_query_hf(system_prompt, max_new_tokens):
     # print(result)
     if 'error' in result:
         print("error:: ", result)
-        return "error", -1
+        return "HF error", -1
     return result[0]['generated_text'], latency
 
 def filter_crop_llm_response(response):

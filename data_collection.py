@@ -39,7 +39,7 @@ class CSVHandler:
         return entries
     
 def initialize_csv_database():
-    fieldnames_progress = ['id', 'User', 'Level', 'Position', 'Hint_Response', 'Observation_Response', 'Positioning_Response', 'Position_Description', 'Overall_Latency', 'Hint_Latency', 'Observation_Latency', 'Position_Latency', 'Hint_Model', 'Observation_Model', 'Position_Model',  'Timestamp']
+    fieldnames_progress = ['id', 'User', 'Level', 'Position', 'Hint_Response', 'Observation_Response', 'Positioning_Response', 'Position_Description', 'Overall_Latency', 'Hint_Latency', 'Observation_Latency', 'Position_Latency', 'Hint_Model', 'Observation_Model', 'Position_Model',  'Mistakes_per_Hint_Wrong', 'Mistakes_per_Hint_Missing', 'Timestamp']
     csv_handler_progress = CSVHandler('data/data_progress.csv', fieldnames_progress)
     csv_handler_progress.initialize_file()
     
@@ -47,7 +47,7 @@ def initialize_csv_database():
     csv_handler_meaning = CSVHandler('data/data_meaning.csv', fieldnames_meaning)
     csv_handler_meaning.initialize_file()
     
-    fieldnames_game = ['id', 'User', 'Level', 'Completed', 'onTime', 'Duration', 'Meaning_Completed', 'Nb_Hints_Used', 'Nb_Mistakes_per_Hint', 'Timestamp']
+    fieldnames_game = ['id', 'User', 'Level', 'Completed', 'onTime', 'Duration', 'Meaning_Completed', 'Nb_Hints_Used', 'Timestamp']
     csv_handler_game = CSVHandler('data/data_game.csv', fieldnames_game)
     csv_handler_game.initialize_file()
     

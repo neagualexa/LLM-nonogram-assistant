@@ -114,16 +114,11 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
         missing_selections = differences["missing_selection"]
         
         if completed and (wrong_selections == [] and missing_selections == []):
-            system_message = f"""Tell the user that the level is completed and congratulate them."""
-            user_message = ""
-            llm.model_kwargs["max_tokens"] = 10
-            llm.model_kwargs["system_message"] = system_message
-            llm.model_kwargs["history"] = past_messages
-            
-            response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
+            system_message_congrats = f"""Congratulate that the level is completed."""
+            user_message = "How did I do?"
+            response, _ = callAzureLLM(user_message, system_message=system_message_congrats, max_tokens=10, past_messages=past_messages)
             print("response:: ", response)
-            if 'error' in response:
-                return "Server error:: " + response["error"]
+            
             return response
 
         else:
@@ -159,6 +154,9 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             positioning_response_prev, positioning_latency = (component_pipeline_query_hf(system_message_positioning, 20))
             positioning_response = filter_crop_llm_response(positioning_response_prev)
             print("positioning LLM:: ", positioning_response)
+            # check if error from API
+            if "HF error" in positioning_response:
+                return "API server ERROR"
             
             #     1      Formulate a phrase describing the position using Azure LLM
             # user_message = "Tell me where the location is in the grid. Start with 'Rephrased:'."
@@ -177,6 +175,9 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             observation_response_prev, observation_latency = (component_pipeline_query_hf(system_message_observation, 100))
             observation_response = filter_crop_llm_response(observation_response_prev)
             print("observation LLM:: "+ observation_response)
+            # check if error from API
+            if "HF error" in observation_response:
+                return "API server ERROR"
             
             #     2     Use the position to observe the surroundings using HuggingFace
             # user_message = "Tell me about the cells in the vicinity. Start with 'Observation:'."
@@ -207,10 +208,13 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             overall_latency = end_time - start_time
             print(f"Overall LLM pipeline Latency: {overall_latency} seconds")
             
-            ############ Save CSV entry
-            csv_count_entries = len(csv_handler_progress.read_entries()) - 1
-            new_entry_attributes = {'Position': random_position, 'Hint_Response': hint_response, 'Observation_Response': observation_response, 'Positioning_Response': positioning_response, 'Position_Description': position_description, 'Overall_Latency': overall_latency, 'Hint_Latency': hint_latency, 'Observation_Latency': observation_latency, 'Position_Latency': positioning_latency, 'Hint_Model': hint_model, 'Observation_Model': observation_model, 'Position_Model': position_model}
-            csv_handler_progress.update_entry(csv_count_entries, new_entry_attributes)            
+            try:
+                ############ Save CSV entry
+                csv_count_entries = len(csv_handler_progress.read_entries()) - 1
+                new_entry_attributes = {'Position': random_position, 'Hint_Response': hint_response, 'Observation_Response': observation_response, 'Positioning_Response': positioning_response, 'Position_Description': position_description, 'Overall_Latency': overall_latency, 'Hint_Latency': hint_latency, 'Observation_Latency': observation_latency, 'Position_Latency': positioning_latency, 'Hint_Model': hint_model, 'Observation_Model': observation_model, 'Position_Model': position_model, 'Mistakes_per_Hint_Wrong': len(wrong_selections), 'Mistakes_per_Hint_Missing': len(missing_selections)}
+                csv_handler_progress.update_entry(csv_count_entries, new_entry_attributes)     
+            except Exception as e:
+                print("Error in saving CSV entry:: ", e)   
             
             return hint_response
             # system_message = system_message_hint  
