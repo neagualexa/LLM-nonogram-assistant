@@ -117,14 +117,15 @@ def check_puzzle_progress():
     levelMeaning = puzzle_progress['levelMeaning']
     username = puzzle_progress['username']
     level = puzzle_progress['level']
+    hint_id = puzzle_progress['hint_id']
     
     ##### Save the data to the CSV Progress database
     if not completed:
-        count_entries = len(csv_handler_progress.read_entries())
-        new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        # count_entries = len(csv_handler_progress.read_entries())
+        new_entry = {'id': hint_id, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
     ############################################## call LLM for response
-    response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, messages_cache)
+    response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, messages_cache)
     #####
     try:
         url = 'http://localhost:5005/verbal_hint'

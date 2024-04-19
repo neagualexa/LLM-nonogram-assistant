@@ -1,6 +1,7 @@
 import urllib.request
 import json
 import time
+import re
 from typing import Dict
 import azure.LLM_calls.azurecredentials as azurecredentials
 from langchain_community.llms.azureml_endpoint import (
@@ -105,7 +106,7 @@ def callAzureLLM(user_message, system_message=system_message, max_tokens=100, pa
         
 ################ Function call for progress feedback ################
     
-def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, past_messages=[]):
+def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, past_messages=[]):
         
     try:
         cellStates, solutionCellStates, width, height = reformat_cellStates(cellStates, solutionCellStates)
@@ -116,6 +117,9 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
         if completed and (wrong_selections == [] and missing_selections == []):
             system_message_congrats = f"""Congratulate that the level is completed."""
             user_message = "How did I do?"
+            
+            # return "test response" # for testing, TODO: to be removed
+            
             response, _ = callAzureLLM(user_message, system_message=system_message_congrats, max_tokens=10, past_messages=past_messages)
             print("response:: ", response)
             
@@ -197,11 +201,13 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             # print("HF - hint LLM:: ", hint_response)
             
             #     3      Use the observation and position description to give feedback using Azure LLM
-            user_message = "Give me a hint in 1-2 sentences based on the observation. Start with 'Hint:'."
+            user_message = "Give me a hint in 1-2 sentences based on the observation. Make sure to say where I made a mistake. Start with 'Hint:'."
             system_message_hint = system_prompt_hint_llama(positioning_response, observation_response)
-            hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=50, past_messages=[])
+            hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=70, past_messages=[])
             # print("Llama2 - hint LLM:: ", hint_response)
-            hint_response = ".".join(hint_response.split("Hint:")[1].split(".")[:-1])+"." # removing the last unfinished sentence
+            hint_response = "".join(hint_response.split("Hint:")[1]) # removing the last unfinished sentence
+            # hint_response = ".".join(re.split(r'[!?.]', hint_response)[:-1])+"."
+            hint_response = remove_after_last_punctuation(hint_response)
             print("Llama2 - hint LLM:: ", hint_response)
             
             end_time = time.time()
@@ -210,9 +216,9 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             
             try:
                 ############ Save CSV entry
-                csv_count_entries = len(csv_handler_progress.read_entries()) - 1
+                # csv_count_entries = len(csv_handler_progress.read_entries()) - 1
                 new_entry_attributes = {'Position': random_position, 'Hint_Response': hint_response, 'Observation_Response': observation_response, 'Positioning_Response': positioning_response, 'Position_Description': position_description, 'Overall_Latency': overall_latency, 'Hint_Latency': hint_latency, 'Observation_Latency': observation_latency, 'Position_Latency': positioning_latency, 'Hint_Model': hint_model, 'Observation_Model': observation_model, 'Position_Model': position_model, 'Mistakes_per_Hint_Wrong': len(wrong_selections), 'Mistakes_per_Hint_Missing': len(missing_selections)}
-                csv_handler_progress.update_entry(csv_count_entries, new_entry_attributes)     
+                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
             except Exception as e:
                 print("Error in saving CSV entry:: ", e)   
             
@@ -233,3 +239,13 @@ def filter_crop_llm_response(response):
         if (response[-1] == "'"):
             response = response[:-1]
     return response
+
+
+def remove_after_last_punctuation(input_string):
+    # Find the last punctuation mark
+    match = re.search(r'[!?.]', input_string[::-1])  # Reverse the string to find the last punctuation mark
+    if match:
+        last_punctuation_index = len(input_string) - match.start() - 1
+        return input_string[:last_punctuation_index + 1]
+    else:
+        return input_string  # No punctuation found, return the original string
