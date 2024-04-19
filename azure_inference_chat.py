@@ -205,7 +205,9 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             system_message_hint = system_prompt_hint_llama(positioning_response, observation_response)
             hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=70, past_messages=[])
             # print("Llama2 - hint LLM:: ", hint_response)
-            hint_response = "".join(hint_response.split("Hint:")[1]) # removing the last unfinished sentence
+            # Reshaping the response
+            hint_response = "".join(hint_response.split("Hint:")[1])    # only take the hint part
+            hint_response = "".join(hint_response.split('\n'))          # remove the newlines
             # hint_response = ".".join(re.split(r'[!?.]', hint_response)[:-1])+"."
             hint_response = remove_after_last_punctuation(hint_response)
             print("Llama2 - hint LLM:: ", hint_response)
