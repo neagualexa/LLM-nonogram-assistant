@@ -8,7 +8,12 @@ from langchain_community.llms.azureml_endpoint import (
     AzureMLOnlineEndpoint,
     ContentFormatterBase
 )
-from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around, system_prompt_hint, system_prompt_hint_llama, system_prompt_observe_around_llama
+from system_prompt import (
+    system_prompt, 
+    system_prompt_positioning, system_prompt_positioning_llama, 
+    system_prompt_observe_around, system_prompt_observe_around_llama,
+    system_prompt_hint, system_prompt_hint_llama
+)
 from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
 from puzzle_checker_inference import component_pipeline_query_hf
 from data_collection import csv_handler_progress
@@ -18,11 +23,11 @@ https://learn.microsoft.com/en-us/azure/machine-learning/how-to-deploy-models-ll
 Only for chat models
 '''
 
-API_URL = azurecredentials.api_url_70
-API_KEY = azurecredentials.key_70
-hint_model          = "Azure Lama 2 70b chat"
-observation_model   = "HF Mixtral-8x7B-Instruct-v0.1"
-position_model      = "HF Mixtral-8x7B-Instruct-v0.1"
+API_URL = azurecredentials.api_url_8b_3
+API_KEY = azurecredentials.key_8b_3
+hint_model          = "Azure Llama 3 8b Instruct" #"Azure Llama 2 70b chat"
+observation_model   = "Azure Llama 3 8b Instruct" #"HF Mixtral-8x7B-Instruct-v0.1"
+position_model      = "Azure Llama 3 8b Instruct" #"HF Mixtral-8x7B-Instruct-v0.1"
 
 system_message = "You are NonoAI, a helpful assistant replying the user's questions. Reply in short sentences."
 # system_message = """You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
@@ -84,7 +89,7 @@ def callAzureLLM(user_message, system_message=system_message, max_tokens=100, pa
         # llm.model_kwargs["history"] = past_messages
         llm.model_kwargs["system_message"] = system_message
         llm.model_kwargs["max_tokens"] = max_tokens
-        response = llm.invoke(input=user_message) # [HumanMessage(content=user_message)], config=metadata
+        response = llm.invoke(input=user_message, stop=["<|eot_id|>"]) # [HumanMessage(content=user_message)], config=metadata
         print("response:: ", response)
         
         end_time = time.time()
@@ -153,46 +158,43 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             print("Backend position description:: ", position_description)
             
             #     1      Formulate a phrase describing the position
-            system_message_positioning = system_prompt_positioning(height, width, random_position, position_description)
-            # print("system_message:: ", system_message_positioning)
-            positioning_response_prev, positioning_latency = (component_pipeline_query_hf(system_message_positioning, 20))
-            positioning_response = filter_crop_llm_response(positioning_response_prev)
-            print("positioning LLM:: ", positioning_response)
-            # check if error from API
-            if "HF error" in positioning_response:
-                return "API server ERROR"
-            
-            #     1      Formulate a phrase describing the position using Azure LLM
-            # user_message = "Tell me where the location is in the grid. Start with 'Rephrased:'."
-            # llm.model_kwargs["max_tokens"] = 50
             # system_message_positioning = system_prompt_positioning(height, width, random_position, position_description)
-            # llm.model_kwargs["system_message"] = system_message_positioning
-            # # llm.model_kwargs["history"] = past_messages
-            # positioning_response = llm.invoke(input=user_message)
+            # # print("system_message:: ", system_message_positioning)
+            # positioning_response_prev, positioning_latency = (component_pipeline_query_hf(system_message_positioning, 20))
+            # positioning_response = filter_crop_llm_response(positioning_response_prev)
             # print("positioning LLM:: ", positioning_response)
+            # # check if error from API
+            # if "HF error" in positioning_response:
+            #     return "API server ERROR"
+            
+            #     1      Formulate a phrase describing the position using Azure LLM llama 3 instruct
+            user_message = "Tell me where the location is in the grid."
+            # user_message = "Tell me where the location is in the grid. Start with \"Rephrased: '\"."
+            system_message_positioning = system_prompt_positioning_llama(height, width, random_position, position_description)
+            positioning_response_prev, positioning_latency = callAzureLLM(user_message, system_message=system_message_positioning, max_tokens=20, past_messages=[])
+            positioning_response = filter_crop_llm_response(positioning_response_prev)
             # positioning_response = positioning_response.split("Rephrased:")[1]
-            # print("positioning LLM:: ", positioning_response)
+            print("positioning LLM:: ", positioning_response)
             
-            #    2       Use the position to observe the surroundings
-            system_message_observation = system_prompt_observe_around(height, width, random_position, positioning_response, solutionCellStates)
+            #    2       Use the position to observe the surroundings using HuggingFace
+            # system_message_observation = system_prompt_observe_around(height, width, random_position, positioning_response, solutionCellStates)
+            # # print("system_message_observation:: ", system_message_observation)
+            # observation_response_prev, observation_latency = (component_pipeline_query_hf(system_message_observation, 100))
+            # observation_response = filter_crop_llm_response(observation_response_prev)
+            # print("observation LLM:: "+ observation_response)
+            # # check if error from API
+            # if "HF error" in observation_response:
+            #     return "API server ERROR"
+            
+            #     2     Use the position to observe the surroundings using Azure LLM
+            user_message = "Tell me about the cells in the vicinity."
+            # user_message = "Tell me about the cells in the vicinity. Start with \"Observation: '\"."
+            system_message_observation = system_prompt_observe_around_llama(height, width, random_position, positioning_response, solutionCellStates)
             # print("system_message_observation:: ", system_message_observation)
-            observation_response_prev, observation_latency = (component_pipeline_query_hf(system_message_observation, 100))
+            observation_response_prev, observation_latency = callAzureLLM(user_message, system_message=system_message_observation, max_tokens=100, past_messages=[])
             observation_response = filter_crop_llm_response(observation_response_prev)
-            print("observation LLM:: "+ observation_response)
-            # check if error from API
-            if "HF error" in observation_response:
-                return "API server ERROR"
-            
-            #     2     Use the position to observe the surroundings using HuggingFace
-            # user_message = "Tell me about the cells in the vicinity. Start with 'Observation:'."
-            # llm.model_kwargs["max_tokens"] = 100
-            # system_message_observation = system_prompt_observe_around_llama(height, width, random_position, positioning_response, solutionCellStates)
-            # llm.model_kwargs["system_message"] = system_message_observation
-            # # llm.model_kwargs["history"] = past_messages
-            # observation_response = llm.invoke(input=user_message)
-            # print("observation LLM:: "+ observation_response)
             # observation_response = observation_response.split("Observation:")[1]
-            # print("observation LLM:: "+ observation_response)
+            print("observation LLM:: "+ observation_response)
             
             #     3      Use the observation and position description to give feedback using HuggingFace
             # system_message_hint = system_prompt_hint(positioning_response, observation_response)
@@ -201,15 +203,16 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             # print("HF - hint LLM:: ", hint_response)
             
             #     3      Use the observation and position description to give feedback using Azure LLM
-            user_message = "Give me a hint in 1-2 sentences based on the observation. Make sure to say where I made a mistake. Start with 'Hint:'."
-            system_message_hint = system_prompt_hint_llama(positioning_response, observation_response)
-            hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=70, past_messages=[])
+            user_message = "Give me a hint in 1-2 sentences based on the observation. Make sure to say where I made a mistake."
+            # user_message = "Give me a hint in 1-2 sentences based on the observation. Make sure to say where I made a mistake. Start with 'Hint:'."
+            system_message_hint = system_prompt_hint(positioning_response, observation_response)
+            hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=50, past_messages=[])
             # print("Llama2 - hint LLM:: ", hint_response)
             # Reshaping the response
-            hint_response = "".join(hint_response.split("Hint:")[1])    # only take the hint part
+            # hint_response = "".join(hint_response.split("Hint:")[1])    # only take the hint part
             hint_response = "".join(hint_response.split('\n'))          # remove the newlines
             # hint_response = ".".join(re.split(r'[!?.]', hint_response)[:-1])+"."
-            hint_response = remove_after_last_punctuation(hint_response)
+            hint_response = remove_after_last_punctuation(filter_crop_llm_response(hint_response))
             print("Llama2 - hint LLM:: ", hint_response)
             
             end_time = time.time()
@@ -233,13 +236,18 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
 
         print(error.info())
         print(error.read().decode("utf8", 'ignore'))
-        
+
 def filter_crop_llm_response(response):
-    # only accept the sentence between the first ':' and '\n' 
+    # only accept the sentence until terminator
+    terminator = ["#", "\n", "<|eot_id|>"]
     response = response.split("\n")[0]
-    if ("'" in response):
-        if (response[-1] == "'"):
-            response = response[:-1]
+    if any([term in response for term in terminator]):
+        for term in terminator:
+            if term in response:
+                response = response.split(term)[0]
+                break
+    if (response[-1] == "'"):
+        response = response[:-1]
     return response
 
 

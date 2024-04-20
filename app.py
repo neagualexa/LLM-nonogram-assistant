@@ -127,13 +127,13 @@ def check_puzzle_progress():
     ############################################## call LLM for response
     response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, messages_cache)
     #####
-    try:
-        url = 'http://localhost:5005/verbal_hint'
-        data = {'responseText': response_llm, 'counter': 0}
-        response = requests.post(url, data=data)
-        print("response from verbal_hint:: ", response)
-    except Exception as e:
-        print("error in /check_puzzle_progress connecting to /verbal_hint:: ", e)
+    # try:
+    #     url = 'http://localhost:5005/verbal_hint'
+    #     data = {'responseText': response_llm, 'counter': 0}
+    #     response = requests.post(url, data=data)
+    #     print("response from verbal_hint:: ", response)
+    # except Exception as e:
+    #     print("error in /check_puzzle_progress connecting to /verbal_hint:: ", e)
     ############################################## 
 
     if response_llm:
