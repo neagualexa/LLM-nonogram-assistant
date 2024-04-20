@@ -203,9 +203,9 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             # print("HF - hint LLM:: ", hint_response)
             
             #     3      Use the observation and position description to give feedback using Azure LLM
-            user_message = "Give me a hint in 1-2 sentences based on the observation. Make sure to say where I made a mistake."
+            user_message = "Give me a hint in 1-2 sentences. Where did I make a mistake?"
             # user_message = "Give me a hint in 1-2 sentences based on the observation. Make sure to say where I made a mistake. Start with 'Hint:'."
-            system_message_hint = system_prompt_hint(positioning_response, observation_response)
+            system_message_hint = system_prompt_hint_llama(positioning_response, observation_response)
             hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=50, past_messages=[])
             # print("Llama2 - hint LLM:: ", hint_response)
             # Reshaping the response
