@@ -51,11 +51,16 @@ def initialize_csv_database():
     csv_handler_game = CSVHandler('data/data_game.csv', fieldnames_game)
     csv_handler_game.initialize_file()
     
-    return csv_handler_progress, csv_handler_meaning, csv_handler_game
+    # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
+    fieldnames_interaction = ['id', 'User', 'Level', 'Cell_1', 'Cell_2', 'Cell_3']
+    csv_handler_interaction = CSVHandler('data/data_interaction.csv', fieldnames_interaction)
+    csv_handler_interaction.initialize_file()
+    
+    return csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
 
 
 # CSV Database Initialization
-csv_handler_progress, csv_handler_meaning, csv_handler_game = initialize_csv_database()    
+csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction = initialize_csv_database()    
     
 # Examples to use the CSVHandler class
     # # Add an entry in MEANING DATA

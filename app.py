@@ -10,7 +10,8 @@ from azure_inference_chat import callAzureLLM, callLLM_progress_checker         
 # from old.azure_inference import callLLM_progress_checker                            # azure llm non chat
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
-from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game
+from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
+from grid_difference_checker import record_past_interactions
 
 app = Flask(__name__)
 
@@ -198,6 +199,24 @@ def save_game():
         csv_handler_game.add_entry(new_entry)
         
     return "Game data saved successfully!"
+
+@app.route('/record_interaction', methods=['POST'])
+def record_interactions():
+    interactions = request.form.get('GridInteractions')
+    interactions = json.loads(interactions)
+    username = interactions["username"]
+    level = interactions["level"]
+    lastPressedCell_1 = interactions["lastPressedCell_1"]
+    lastPressedCell_2 = interactions["lastPressedCell_2"]
+    lastPressedCell_3 = interactions["lastPressedCell_3"]
+    
+    # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
+    ##### Save the data to the CSV Interaction database
+    new_entry = {'id': len(csv_handler_interaction.read_entries()), 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3}
+    csv_handler_interaction.add_entry(new_entry)
+    
+    return "Saved interaction data successfully!"
+
 
 def format_message(message):
     formatted_message = [
