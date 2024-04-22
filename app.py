@@ -11,6 +11,7 @@ from azure_inference_chat import callAzureLLM, callLLM_progress_checker         
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
 from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
+from grid_difference_checker import zeroToOneIndexed
 
 app = Flask(__name__)
 
@@ -205,14 +206,21 @@ def record_interactions():
     interactions = json.loads(interactions)
     username = interactions["username"]
     level = interactions["level"]
-    lastPressedCell_1 = interactions["lastPressedCell_1"]
+    lastPressedCell_1 = interactions["lastPressedCell_1"] # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
     lastPressedCell_2 = interactions["lastPressedCell_2"]
     lastPressedCell_3 = interactions["lastPressedCell_3"]
+    solutionGrid = interactions["solutionGrid"]
+    
+    # top row and left column are indexed 0
+    # [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3] = zeroToOneIndexed([lastPressedCell_1, lastPressedCell_2, lastPressedCell_3])
     
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
     ##### Save the data to the CSV Interaction database
-    new_entry = {'id': len(csv_handler_interaction.read_entries()), 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3}
+    new_entry = {'id': len(csv_handler_interaction.read_entries()), 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Target_row': 'x', 'Target_col': 'y'}    
     csv_handler_interaction.add_entry(new_entry)
+    
+    #### update target cell on previous entry
+    csv_handler_interaction.update_entry(len(csv_handler_interaction.read_entries())-2, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
     
     return "Saved interaction data successfully!"
 

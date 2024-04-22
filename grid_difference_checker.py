@@ -203,3 +203,12 @@ def count_consecutive_cells(grid):
         col_counts.append(calculate_group_counts(col))
 
     return row_counts, col_counts
+
+
+def zeroToOneIndexed(cells):
+    for i, cell in enumerate(cells):
+        # check if cell is empty
+        if not cell:
+            continue
+        cells[i] = (cell[0]+1, cell[1]+1, cell[2], cell[3]) # convert to 1-indexed
+    return cells
