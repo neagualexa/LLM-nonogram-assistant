@@ -19,12 +19,12 @@ class NonogramSolver:
         self.ROWS_VALUES = ROWS_VALUES
         self.no_of_rows = len(ROWS_VALUES)
         # self.rows_changed = [0] * self.no_of_rows
-        self.rows_done = [0] * self.no_of_rows
+        self.rows_done = [0] * self.no_of_rows      # 0 = not done, 1 = done
 
         self.COLS_VALUES = COLS_VALUES
         self.no_of_cols = len(COLS_VALUES)
         # self.cols_changed = [0] * self.no_of_cols
-        self.cols_done = [0] * self.no_of_cols
+        self.cols_done = [0] * self.no_of_cols      # 0 = not done, 1 = done
 
         self.solved = False 
         self.shape = (self.no_of_rows, self.no_of_cols)
@@ -34,42 +34,55 @@ class NonogramSolver:
         if self.savepath != '': self.n = 0
 
     def solve(self):
-        # step 1: Defining all possible solutions for every row and col
+        """
+        Method that solves the nonogram puzzle.
+        """
+        # step 1: Defining all possible solutions for every row and col (indepenedently of the other rows and cols)
         self.rows_possibilities = self.create_possibilities(self.ROWS_VALUES, self.no_of_cols)
         self.cols_possibilities = self.create_possibilities(self.COLS_VALUES, self.no_of_rows)
         
         while not self.solved:
-            # step 2: Order indici by lowest 
-            self.lowest_rows = self.select_index_not_done(self.rows_possibilities, 1)
-            self.lowest_cols = self.select_index_not_done(self.cols_possibilities, 0)
-            self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
+            # step 2: Order indici by lowest (start with the rows and cols with the lowest number of possibilities -> most likely to have larger clues)
+            self.lowest_rows = self.select_index_not_done(self.rows_possibilities, 1)                   # get the rows with the lowest number of possibilities
+            self.lowest_cols = self.select_index_not_done(self.cols_possibilities, 0)                   # get the cols with the lowest number of possibilities
+            self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])   # sort by lowest number of possibilities
 
-            # step 3: Get only zeroes or only ones of lowest possibility 
+            # step 3: Get only zeroes or only ones of lowest possibility (
             for ind1, _, row_ind in self.lowest:
+                """ `row_ind` is a boolean that indicates whether the current context is a row (True) or a column (False). """
                 if not self.check_done(row_ind, ind1):
-                    if row_ind: values = self.rows_possibilities[ind1]
-                    else: values = self.cols_possibilities[ind1]
-                    same_ind = self.get_only_one_option(values)
+                    # if the row or column is not done yet, get the possibilities for the row or column
+                    if row_ind: values = self.rows_possibilities[ind1]  # get the possibilities for the row
+                    else:       values = self.cols_possibilities[ind1]  # get the possibilities for the column
+                    same_ind = self.get_only_one_option(values)         # get the cells that have only one possible value across all possibilities in the line   
+                    
                     for ind2, val in same_ind:
-                        if row_ind: ri, ci = ind1, ind2
-                        else: ri, ci = ind2, ind1 
+                        # for each cell with only one possible position in line, update the board with the value
+                        
+                        # get the row and column index based on the row_ind boolean (whether it is a row or a column)
+                        if row_ind: ri, ci = ind1, ind2                 # if row
+                        else:       ri, ci = ind2, ind1                 # if column
+                        
+                        # update the board only for the cell that is gray (initial cell)
                         if self.board[ri][ci] == 0:
-                            # only update if the cell is gray (initial cell)
-                            self.board[ri][ci] = val
-                            if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
-                            else: self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
-                            clear_output(wait=True)                            
+                            self.board[ri][ci] = val                # update the cell with the value
+                            if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)   # remove the possibilities for the column depending on the value of the cell
+                            else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)   # remove the possibilities for the row depending on the value of the cell
+                            clear_output(wait=True)                              
                             # self.display_board_temporary()
                             if self.savepath != '':
                                 self.save_board()
                                 self.n += 1
-                        # else:
-                        #     print('Cell already filled')
-                    self.update_done(row_ind, ind1)
-            self.check_solved()
+                    self.update_done(row_ind, ind1)                 # update the rows_done or cols_done list when a row or column is completed
+            self.check_solved()                                     # check if the puzzle is solved
     
-    #TODO: need to find a way to start from the progress grid and solve the puzzle -> create the possibilities based on the progress grid
+    
     def recommend_next_action(self):
+        """
+        Method that recommends the next cell to fill in the nonogram puzzle based on the current grid progress state.
+        
+        TODO: need to find a way to start from the progress grid and solve the puzzle -> create the possibilities based on the progress grid
+        """
         # step 1: Defining all possible solutions for every row and col
         self.rows_possibilities = self.create_possibilities(self.ROWS_VALUES, self.no_of_cols)
         self.cols_possibilities = self.create_possibilities(self.COLS_VALUES, self.no_of_rows)
@@ -80,25 +93,25 @@ class NonogramSolver:
             self.lowest_cols = self.select_index_not_done(self.cols_possibilities, 0)
             self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
 
-            # step 3: Get only zeroes or only ones of lowest possibility 
+            # step 3: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
             for ind1, _, row_ind in self.lowest:
                 if not self.check_done(row_ind, ind1):
                     if row_ind: values = self.rows_possibilities[ind1]
-                    else: values = self.cols_possibilities[ind1]
+                    else:       values = self.cols_possibilities[ind1]
                     same_ind = self.get_only_one_option(values)
                     for ind2, val in same_ind:
                         if row_ind: ri, ci = ind1, ind2
-                        else: ri, ci = ind2, ind1 
+                        else:       ri, ci = ind2, ind1 
                         if self.board[ri][ci] == 0:
                             # only update if the cell is gray (initial cell) or empty
                             print(f'NEXT CELL to set: row: {ri}, col: {ci}, val: {val}; check with progress val {self.progress_grid[ri][ci]}')
                             self.board[ri][ci] = val
                             if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
-                            else: self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
+                            else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
                             clear_output(wait=True)
                             
                             
-                            # check for first mistake between progress grid and board 
+                            # step 4: check for first mistake between progress grid and board 
                             # (the board is completed in a very specific order, so it provides the best next step 
                             # assuming the user comples the grid in a similar strategy/order)
                             if self.progress_grid[ri][ci] != self.board[ri][ci]:
@@ -117,31 +130,55 @@ class NonogramSolver:
         return -1, -1, -1 # no recommended next step as the grid is solved
                     
     def create_possibilities(self, values, no_of_other):
+        """
+        Public method that generates all possible sequences of filled and empty cells for each row or column in a nonogram puzzle, 
+        given the sequence of clues and the total number of cells.
+        
+        values:         list of lists of integers (ROW_VALUES or COLS_VALUES)
+        no_of_other:    integer (no_of_cols or no_of_rows)
+        
+        possibilities:  list of lists of lists of integers => all possible solutions for all rows or columns
+        """
         possibilities = []
         
-        for v in values:
-            groups = len(v)
-            no_empty = no_of_other-sum(v)-groups+1
-            ones = [[1]*x for x in v]
-            res = self._create_possibilities(no_empty, groups, ones)
+        for v in values:                            # iterate over the values of each row or column
+            groups = len(v)                         # calculate the number of groups of filled cells on either row or column
+            no_empty = no_of_other-sum(v)-groups+1  # calculate the number of empty cells
+            ones = [[1]*x for x in v]               # create a list of lists of 1s of size of the values on either row or column
+            res = self._create_possibilities(no_empty, groups, ones)    # generate all possible combinations of filled and empty cells on line
             possibilities.append(res)  
         
         return possibilities
 
     def _create_possibilities(self, n_empty, groups, ones):
+        """
+        Helper function used internally by the create_possibilities function to generate combinations of filled and empty cells 
+        based on the number of groups and empty cells for one row or column.
+        
+        n_empty:    integer (no_empty)
+        groups:     integer (groups)
+        ones:       list of lists of integers (ones)
+        
+        res_opts:   list of lists of integers (res_opt: list of integers) => all possible solutions for one row or column
+        """
         res_opts = []
-        for p in combinations(range(groups+n_empty), groups):
-            selected = [-1]*(groups+n_empty)
+        for p in combinations(range(groups+n_empty), groups):   # generate all possible combinations of filled and empty cells on line
+            selected = [-1]*(groups+n_empty)                    # create a list of -1s of size of the values on either row or column
             ones_idx = 0
             for val in p:
-                selected[val] = ones_idx
-                ones_idx += 1
-            res_opt = [ones[val]+[-1] if val > -1 else [-1] for val in selected]
-            res_opt = [item for sublist in res_opt for item in sublist][:-1]
-            res_opts.append(res_opt)
+                selected[val] = ones_idx                        # replace the -1s with the values of the filled cells
+                ones_idx += 1                                   # increment the index of the filled cells
+            res_opt = [ones[val]+[-1] if val > -1 else [-1] for val in selected]    # replace the -1s with the values of the filled cells
+            res_opt = [item for sublist in res_opt for item in sublist][:-1]        # flatten the list of lists, remove the value at the end (only )
+            res_opts.append(res_opt)                                                # append the result to the list of possibilities for that one row or column
         return res_opts
 
     def select_index_not_done(self, possibilities, row_ind):
+        """
+        Public method that selects the indices of the rows or columns that have not been completed yet.
+        
+        row_ind: boolean (True for row, False for column)
+        """
         s = [len(i) for i in possibilities]
         if row_ind:
             return [(i, n, row_ind) for i, n in enumerate(s) if self.rows_done[i] == 0]
@@ -149,9 +186,16 @@ class NonogramSolver:
             return [(i, n, row_ind) for i, n in enumerate(s) if self.cols_done[i] == 0]
 
     def get_only_one_option(self, values):
+        """
+        Function identifies which cells in a set of possible nonogram row or column patterns have a consistent value across all possibilities. 
+        These consistent values indicate places where there is only one possible solution for that cell, which can be filled into the nonogram grid.
+        """
         return [(n, np.unique(i)[0]) for n, i in enumerate(np.array(values).T) if len(np.unique(i)) == 1]
 
     def remove_possibilities(self, possibilities, i, val):
+        """
+        Public method that removes the possibilities that do not match the value of the cell at the given index (impossible solutions for other rows or columns).
+        """
         return [p for p in possibilities if p[i] == val]
 
     def display_board_temporary(self):
@@ -168,6 +212,9 @@ class NonogramSolver:
         plt.show()
 
     def save_board(self, increase_size=20):
+        """
+        Save the board as an image file.
+        """
         name = f'0000000{str(self.n)}'[-8:]
         increased_board = np.zeros(np.array((self.no_of_rows, self.no_of_cols)) * increase_size)
         for j in range(self.no_of_rows):
@@ -176,6 +223,10 @@ class NonogramSolver:
         plt.imsave(os.path.join(self.savepath, f'{name}.jpeg'), increased_board, cmap='Greys', dpi=1000)
 
     def update_done(self, row_ind, idx):
+        """
+        Public method that updates the rows_done or cols_done list when a row or column is completed.
+        0 = not done, 1 = done
+        """
         if row_ind: vals = self.board[idx]
         else: vals = [row[idx] for row in self.board]
         if 0 not in vals:
@@ -183,6 +234,13 @@ class NonogramSolver:
             else: self.cols_done[idx] = 1 
 
     def check_done(self, row_ind, idx):
+        """
+        Public method that checks if row or column `idx` is done.
+        
+        row_ind: boolean (True for row, False for column)
+        rows_done: list of integers (0 = not done, 1 = done)
+        cols_done: list of integers (0 = not done, 1 = done)
+        """
         if row_ind: return self.rows_done[idx]
         else: return self.cols_done[idx]
 
