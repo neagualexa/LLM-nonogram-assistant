@@ -2,9 +2,10 @@
 # (https://towardsdatascience.com/solving-nonograms-with-120-lines-of-code-a7c6e0f627e4) [published: Jul 1, 2022]
 # Credits of original code to: Hennie de Harder
 # NOTES:
-# For nonograms with only one solution
-# 0 = initial cell, 1 = filled cell, -1 = empty cell
-# 0 indexed grid and constraints
+#       for nonograms with only one solution
+#       0 = initial cell, 1 = filled cell, -1 = empty cell
+#       0 indexed grid and constraints
+#       puzzle is being completed from left to right and top to bottom
 
 import os, time
 from itertools import combinations
@@ -32,9 +33,46 @@ class NonogramSolver:
         self.savepath = savepath
         if self.savepath != '': self.n = 0
 
+    def solve(self):
         # step 1: Defining all possible solutions for every row and col
-        self.rows_possibilities = self.create_possibilities(ROWS_VALUES, self.no_of_cols)
-        self.cols_possibilities = self.create_possibilities(COLS_VALUES, self.no_of_rows)
+        self.rows_possibilities = self.create_possibilities(self.ROWS_VALUES, self.no_of_cols)
+        self.cols_possibilities = self.create_possibilities(self.COLS_VALUES, self.no_of_rows)
+        
+        while not self.solved:
+            # step 2: Order indici by lowest 
+            self.lowest_rows = self.select_index_not_done(self.rows_possibilities, 1)
+            self.lowest_cols = self.select_index_not_done(self.cols_possibilities, 0)
+            self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
+
+            # step 3: Get only zeroes or only ones of lowest possibility 
+            for ind1, _, row_ind in self.lowest:
+                if not self.check_done(row_ind, ind1):
+                    if row_ind: values = self.rows_possibilities[ind1]
+                    else: values = self.cols_possibilities[ind1]
+                    same_ind = self.get_only_one_option(values)
+                    for ind2, val in same_ind:
+                        if row_ind: ri, ci = ind1, ind2
+                        else: ri, ci = ind2, ind1 
+                        if self.board[ri][ci] == 0:
+                            # only update if the cell is gray (initial cell)
+                            self.board[ri][ci] = val
+                            if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
+                            else: self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
+                            clear_output(wait=True)                            
+                            # self.display_board_temporary()
+                            if self.savepath != '':
+                                self.save_board()
+                                self.n += 1
+                        # else:
+                        #     print('Cell already filled')
+                    self.update_done(row_ind, ind1)
+            self.check_solved()
+    
+    #TODO: need to find a way to start from the progress grid and solve the puzzle -> create the possibilities based on the progress grid
+    def recommend_next_action(self):
+        # step 1: Defining all possible solutions for every row and col
+        self.rows_possibilities = self.create_possibilities(self.ROWS_VALUES, self.no_of_cols)
+        self.cols_possibilities = self.create_possibilities(self.COLS_VALUES, self.no_of_rows)
         
         while not self.solved:
             # step 2: Order indici by lowest 
@@ -53,19 +91,30 @@ class NonogramSolver:
                         else: ri, ci = ind2, ind1 
                         if self.board[ri][ci] == 0:
                             # only update if the cell is gray (initial cell) or empty
-                            print(f'NEXT STEP to fill: row: {ri}, col: {ci}, val: {val}')
+                            print(f'NEXT CELL to set: row: {ri}, col: {ci}, val: {val}; check with progress val {self.progress_grid[ri][ci]}')
                             self.board[ri][ci] = val
                             if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
                             else: self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
                             clear_output(wait=True)
-                            self.display_board_temporary()
+                            
+                            
+                            # check for first mistake between progress grid and board 
+                            # (the board is completed in a very specific order, so it provides the best next step 
+                            # assuming the user comples the grid in a similar strategy/order)
+                            if self.progress_grid[ri][ci] != self.board[ri][ci]:
+                                print(f'Inconsistency in cell row: {ri}, col: {ci}, progress: {self.progress_grid[ri][ci]} should be val: {val}, recommending...')
+                                print(f'\n\nRecommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]\n\n')
+                                return ri, ci, val
+                            
+                            # self.display_board_temporary()
                             if self.savepath != '':
                                 self.save_board()
                                 self.n += 1
-                        else:
-                            print('Cell already filled')
+                        # else:
+                        #     print('Cell already filled')
                     self.update_done(row_ind, ind1)
             self.check_solved()
+        return -1, -1, -1 # no recommended next step as the grid is solved
                     
     def create_possibilities(self, values, no_of_other):
         possibilities = []
@@ -110,7 +159,7 @@ class NonogramSolver:
         plt.axis('off')
         # close the plot to continue
         plt.show(block=False)
-        plt.pause(1)
+        plt.pause(0.2)
         plt.close()
         
     def display_board(self):
@@ -143,17 +192,17 @@ class NonogramSolver:
       
       
             
-if __name__ == '__main__':
-    # 0 = initial cell, 1 = filled cell, -1 = empty cell
-    PROGRESS_GRID = [[0, 1, 1, 0, 0, 0, 0, 1, 1, 0], [1, 1, 0, 1, 1, 1, 1, 0, 1, 1], [1, 0, 1, 1, 1, 0, 1, 1, 0, 1], [0, 1, 1, 1, 1, 0, 1, 1, 1, 0], [0, 1, 1, 1, 1, 0, 1, 1, 1, 0], [0, 1, 1, 1, 0, 1, 1, 1, 1, 0], [0, 1, 1, 0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0, 0], [0, 0, 1, 1, 0, 0, 1, 1, 0, 0]]
-    PROGRESS_GRID =  [[-1 if cell == 0 else cell for cell in row] for row in PROGRESS_GRID]
-    ROWS_VALUES, COLS_VALUES = count_consecutive_cells(PROGRESS_GRID)
-    # ROWS_VALUES = [[2], [4], [6], [4, 3], [5, 4], [2, 3, 2], [3, 5], [5], [3], [2], [2], [6]]
-    # COLS_VALUES = [[3], [5], [3, 2, 1], [5, 1, 1], [12], [3, 7], [4, 1, 1, 1], [3, 1, 1], [4], [2]]
-    # PROGRESS_GRID = [[0 for c in range(len(COLS_VALUES))] for r in range(len(ROWS_VALUES))]
+# if __name__ == '__main__':
+#     # 0 = initial cell, 1 = filled cell, -1 = empty cell
+#     PROGRESS_GRID = [[0, 1, 1, 0, 0, 0, 0, 1, 1, 0], [1, 1, 0, 1, 1, 1, 1, 0, 1, 1], [1, 0, 1, 1, 1, 0, 1, 1, 0, 1], [0, 1, 1, 1, 1, 0, 1, 1, 1, 0], [0, 1, 1, 1, 1, 0, 1, 1, 1, 0], [0, 1, 1, 1, 0, 1, 1, 1, 1, 0], [0, 1, 1, 0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0, 0], [0, 0, 1, 1, 0, 0, 1, 1, 0, 0]]
+#     PROGRESS_GRID =  [[-1 if cell == 0 else cell for cell in row] for row in PROGRESS_GRID]
+#     ROWS_VALUES, COLS_VALUES = count_consecutive_cells(PROGRESS_GRID)
+#     # ROWS_VALUES = [[2], [4], [6], [4, 3], [5, 4], [2, 3, 2], [3, 5], [5], [3], [2], [2], [6]]
+#     # COLS_VALUES = [[3], [5], [3, 2, 1], [5, 1, 1], [12], [3, 7], [4, 1, 1, 1], [3, 1, 1], [4], [2]]
+#     # PROGRESS_GRID = [[0 for c in range(len(COLS_VALUES))] for r in range(len(ROWS_VALUES))]
     
-    solver = NonogramSolver(ROWS_VALUES=ROWS_VALUES,COLS_VALUES=COLS_VALUES, PROGRESS_GRID=PROGRESS_GRID)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
-    solver.display_board()
+#     solver = NonogramSolver(ROWS_VALUES=ROWS_VALUES,COLS_VALUES=COLS_VALUES, PROGRESS_GRID=PROGRESS_GRID)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
+#     solver.display_board()
     
-    # IDEA: instead of the grid starting from 0s, starts from a given grid state
-    # -> currently it can only add 1s, but it should be able to add 0s as well (it currently only solved the missing cell mistake, but i should add so it solved the filled cell mistake as well)
+#     # IDEA: instead of the grid starting from 0s, starts from a given grid state
+#     # -> currently it can only add 1s, but it should be able to add 0s as well (it currently only solved the missing cell mistake, but i should add so it solved the filled cell mistake as well)

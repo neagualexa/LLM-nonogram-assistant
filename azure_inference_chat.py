@@ -14,7 +14,7 @@ from system_prompt import (
     system_prompt_observe_around, system_prompt_observe_around_llama,
     system_prompt_hint, system_prompt_hint_llama
 )
-from grid_difference_checker import reformat_cellStates, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
+from grid_difference_checker import string_to_lists_grids, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
 from puzzle_checker_inference import component_pipeline_query_hf
 from data_collection import csv_handler_progress
 '''
@@ -114,7 +114,9 @@ def callAzureLLM(user_message, system_message=system_message, max_tokens=100, pa
 def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, past_messages=[]):
         
     try:
-        cellStates, solutionCellStates, width, height = reformat_cellStates(cellStates, solutionCellStates)
+        # cellStates, solutionCellStates, width, height = string_to_lists_grids(cellStates, solutionCellStates) # already in list format
+        width = len(cellStates[0])
+        height = len(cellStates)
         differences = compare_grids(cellStates, solutionCellStates)
         wrong_selections = differences["wrong_selection"]
         missing_selections = differences["missing_selection"]

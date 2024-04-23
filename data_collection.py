@@ -52,7 +52,7 @@ def initialize_csv_database():
     csv_handler_game.initialize_file()
     
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
-    fieldnames_interaction = ['id', 'User', 'Level', 'Cell_1', 'Cell_2', 'Cell_3', 'Grid', 'Target_row', 'Target_col']
+    fieldnames_interaction = ['id', 'User', 'Level', 'Cell_1', 'Cell_2', 'Cell_3', 'Grid', 'Progress_Grid', 'Target_row', 'Target_col']
     csv_handler_interaction = CSVHandler('data/data_interaction.csv', fieldnames_interaction)
     csv_handler_interaction.initialize_file()
     

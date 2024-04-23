@@ -1,9 +1,9 @@
 import random
 
 
-def reformat_cellStates(cellStates, solutionCellStates):
+def string_to_lists_grids(cellStates, solutionCellStates):
     """
-        At every | character, add a new line
+        Split the cellStates and solutionCellStates strings into lists of lists
     """
     cellStates = cellStates.split("|")
     solutionCellStates = solutionCellStates.split("|")
@@ -35,15 +35,15 @@ def print_format_cellStates(cellStates, solutionCellStates):
 
     for i, row in enumerate(cellStates):
         if i >= 9:
-            formatted_row = f"[({i+1}) " + " ".join(row) + "]"
+            formatted_row = f"[({i+1}) " + " ".join(str(cell) for _, cell in enumerate(row)) + "]"
         else:
-            formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
+            formatted_row = f"[ ({i+1}) " + " ".join(str(cell) for _, cell in enumerate(row)) + "]"
         formatted_grid.append(formatted_row)
     for i, row in enumerate(solutionCellStates):
         if i >= 9:
-            formatted_row = f"[({i+1}) " + " ".join(row) + "]"
+            formatted_row = f"[({i+1}) " + " ".join(str(cell) for _, cell in enumerate(row)) + "]"
         else:
-            formatted_row = f"[ ({i+1}) " + " ".join(row) + "]"
+            formatted_row = f"[ ({i+1}) " + " ".join(str(cell) for _, cell in enumerate(row)) + "]"
         formatted_Solution_grid.append(formatted_row)
         
     formatted_output = "\n".join(formatted_grid)
@@ -82,10 +82,10 @@ def compare_grids(user_progress, solution):
     }
     for i in range(len(user_progress)):
         for j in range(len(user_progress[0])):
-            if user_progress[i][j] != solution[i][j] and user_progress[i][j] == '1':
+            if user_progress[i][j] != solution[i][j] and (user_progress[i][j] == '1' or user_progress[i][j] == 1):
                 # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
                 differences["wrong_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
-            if user_progress[i][j] != solution[i][j] and user_progress[i][j] == '0':
+            if user_progress[i][j] != solution[i][j] and (user_progress[i][j] == '0' or user_progress[i][j] == 0):
                 # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
                 differences["missing_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
     return differences
