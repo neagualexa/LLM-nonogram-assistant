@@ -3,6 +3,7 @@ import sqlite3
 from datetime import datetime
 import requests
 import json
+import ast
 # from old.huggingface_inference import query as callLLM  # hugging face llms
 # from old.llm_local import callLLM                       # local gguf file llm
 # from old.azure_inference_http import callLLM            # azure llm but pure http requests
@@ -11,7 +12,8 @@ from azure_inference_chat import callAzureLLM, callLLM_progress_checker         
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
 from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
-from grid_difference_checker import zeroToOneIndexed
+from grid_difference_checker import zeroToOneIndexed, count_consecutive_cells
+from nonogram_solver import NonogramSolver
 
 app = Flask(__name__)
 
@@ -210,6 +212,7 @@ def record_interactions():
     lastPressedCell_2 = interactions["lastPressedCell_2"]
     lastPressedCell_3 = interactions["lastPressedCell_3"]
     solutionGrid = interactions["solutionGrid"]
+    solutionGrid = ast.literal_eval(solutionGrid)
     
     # top row and left column are indexed 0
     # [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3] = zeroToOneIndexed([lastPressedCell_1, lastPressedCell_2, lastPressedCell_3])
@@ -221,6 +224,14 @@ def record_interactions():
     
     #### update target cell on previous entry
     csv_handler_interaction.update_entry(len(csv_handler_interaction.read_entries())-2, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
+    
+    # predict next best step
+    row_clues, column_clues = count_consecutive_cells(solutionGrid)
+    print("row_clues:: ", row_clues, "column_clues:: ", column_clues)
+    # replace all 0s with -1s
+    solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
+    solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=solutionGrid)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
+    solver.display_board()
     
     return "Saved interaction data successfully!"
 

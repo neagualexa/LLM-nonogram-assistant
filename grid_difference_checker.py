@@ -179,7 +179,7 @@ def count_consecutive_cells(grid):
         group_counts = []
         count = 0
         for cell in array:
-            if cell == '1':
+            if cell == '1' or cell == 1:
                 count += 1
             elif count > 0:
                 group_counts.append(count)
