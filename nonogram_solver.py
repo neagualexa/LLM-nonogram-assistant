@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
 class NonogramSolver:
-    def __init__(self, ROWS_VALUES, COLS_VALUES, PROGRESS_GRID, SOLUTION_GRID, savepath=''):
+    def __init__(self, ROWS_VALUES, COLS_VALUES, PROGRESS_GRID, SOLUTION_GRID, LAST_INTERACTIONS, savepath=''):
         self.ROWS_VALUES = ROWS_VALUES
         self.no_of_rows = len(ROWS_VALUES)
         # self.rows_changed = [0] * self.no_of_rows
@@ -30,6 +30,9 @@ class NonogramSolver:
         self.board = [[0 for c in range(self.no_of_cols)] for r in range(self.no_of_rows)]
         self.progress_grid = PROGRESS_GRID
         self.solution_grid = SOLUTION_GRID
+        self.last_interactions = LAST_INTERACTIONS
+        self.priority_lines = {}
+        
         self.savepath = savepath
         if self.savepath != '': self.n = 0
 
@@ -103,15 +106,24 @@ class NonogramSolver:
                     self.rows_possibilities[i] = self.remove_possibilities(self.rows_possibilities[i], j, self.board[i][j])
                     self.cols_possibilities[j] = self.remove_possibilities(self.cols_possibilities[j], i, self.board[i][j])
         
+        completed_prev_line = False
         #step 5: Solve the puzzle with the remaining possibilities
         while not self.solved:
-            # step 5.1: Order indici by lowest (start with the rows and cols with the lowest number of possibilities -> most likely to have larger clues)
+            # step 5.1: Order indici by priority and lowest (start with the rows and cols with the lowest number of possibilities -> most likely to have larger clues)
             self.lowest_rows = self.select_index_not_done(self.rows_possibilities, 1)
             self.lowest_cols = self.select_index_not_done(self.cols_possibilities, 0)
+            # step 5.1.1: Sort the rows and cols by the lowest number of possibilities
             self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
 
+            self.priority_lines = self.get_priority_lines(self.last_interactions)
+            # Step 5.1.2: Re-Sort the combined list by priority and then by X value
+            self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
+            
+            print(f'Priority lines: {self.priority_lines}', "\nPrioirty lowest: ", self.priority_lowest)
+
             # step 5.2: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
-            for ind1, _, row_ind in self.lowest:
+            # order = self.lowest if completed_prev_line else self.priority_lowest # if previous step completed a line, continue with the lowest, else continue with the priority lowest
+            for ind1, _, row_ind in self.priority_lowest:
                 print(f'Checking row: {ind1}, col: all [0 indexed]')
                 if not self.check_done(row_ind, ind1):
                     # if the row or column is not done yet, get the possibilities for the row or column
@@ -141,6 +153,7 @@ class NonogramSolver:
                         # else:
                         #     print('Cell already filled')
                     self.update_done(row_ind, ind1)
+                    completed_prev_line = True
             self.check_solved()
         return -1, -1, -1 # no recommended next step as the grid is solved
     
@@ -149,9 +162,7 @@ class NonogramSolver:
         Method that finds the differences between the progress grid and the solution grid and nullifies the mistakes in the board by setting the cell to 0 (initial cell).
         Hence, those cell will be reconsidered in forming the line filling possibilities.
         """
-        print('Progress:', progress_grid, ' - Solution:', solution_grid)
         differences = self.compare_grids(progress_grid, solution_grid)
-        print('Differences:', differences)
         
         for diff in differences["wrong_selection"]:
             self.board[diff[0]][diff[1]] = 0        # set the cell to 0 (initial cell) (0 indexed)
@@ -159,6 +170,11 @@ class NonogramSolver:
             self.board[diff[0]][diff[1]] = 0        # set the cell to 0 (initial cell) (0 indexed)
             
     def compare_grids(self, progress, solution):
+        """
+        Method that compares the progress grid with the solution grid and returns the differences between the two grids.
+        
+        differences: dictionary with two keys: 'wrong_selection' and 'missing_selection'
+        """
         differences = {
             "wrong_selection": [],
             "missing_selection": []
@@ -170,7 +186,38 @@ class NonogramSolver:
                 if progress[i][j] != solution[i][j] and (progress[i][j] == -1 or progress[i][j] == 0):
                     differences["missing_selection"].append((i, j))                 # cell is empty in the progress grid but should be filled in the solution grid
         return differences
+
+    def get_priority_lines(self, last_interactions):
+        """
+        Method that returns the priority rows and columns based on the last interactions with the grid.
         
+        Priority means that the solver will first try to solve the rows and columns that were last interacted with.
+        """
+        priority_lines = {
+            "rows": [],
+            "cols": []
+        }
+        
+        for interaction in last_interactions:
+            if interaction == None: continue
+            if not interaction[0] in priority_lines["rows"]:
+                priority_lines["rows"].append(interaction[0])
+            if not interaction[1] in priority_lines["cols"]:
+                priority_lines["cols"].append(interaction[1])
+                
+        return priority_lines
+        
+    def custom_sort_priority(self, item):
+        index, x_value, is_row = item
+        priority = 1  # Default priority (1 means not in the top list)
+        
+        # Assign priority if it's in the priority list
+        if is_row and index in self.priority_lines["rows"]:
+            priority = 0
+        elif not is_row and index in self.priority_lines["cols"]:
+            priority = 0
+        
+        return (priority, x_value)
                     
     def create_possibilities(self, values, no_of_other):
         """
@@ -221,6 +268,7 @@ class NonogramSolver:
         Public method that selects the indices of the rows or columns that have not been completed yet.
         
         row_ind: boolean (True for row, False for column)
+        (i, n, row_ind): tuple of integers (index, number of possibilities, row or column index boolean)
         """
         s = [len(i) for i in possibilities]
         if row_ind:
