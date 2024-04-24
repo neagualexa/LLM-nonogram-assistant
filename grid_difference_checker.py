@@ -80,12 +80,15 @@ def compare_grids(user_progress, solution):
         "wrong_selection": [],
         "missing_selection": []
     }
+    filled = ['1', 1]
+    empty  = ['0', 0]
+    
     for i in range(len(user_progress)):
         for j in range(len(user_progress[0])):
-            if user_progress[i][j] != solution[i][j] and (user_progress[i][j] == '1' or user_progress[i][j] == 1):
+            if user_progress[i][j] != solution[i][j] and (user_progress[i][j] in filled):
                 # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
                 differences["wrong_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
-            if user_progress[i][j] != solution[i][j] and (user_progress[i][j] == '0' or user_progress[i][j] == 0):
+            if user_progress[i][j] != solution[i][j] and (user_progress[i][j] in empty):
                 # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
                 differences["missing_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
     return differences

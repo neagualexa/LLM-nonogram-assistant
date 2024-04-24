@@ -130,15 +130,17 @@ def check_puzzle_progress():
         new_entry = {'id': hint_id, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
         
-    # TODO: find the predicted next step that the user should take
     # predict next best step
-    # row_clues, column_clues = count_consecutive_cells(solutionCellStates)
-    # print("row_clues:: ", row_clues, "column_clues:: ", column_clues)
-    # # replace all 0s with -1s
-    # cellStates = [[-1 if cell == 0 else cell for cell in row] for row in cellStates]
-    # solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=cellStates)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
-    # r_clue, c_clue, val = solver.recommend_next_action()
-    # solver.display_board()
+    row_clues, column_clues = count_consecutive_cells(solutionGrid)
+    print("row_clues:: ", row_clues, "column_clues:: ", column_clues)
+    # replace all 0s with -1s for empty cells
+    prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in prorgessGrid]
+    solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
+    solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
+    r_clue, c_clue, val = solver.recommend_next_action()
+    print("r_clue:: ", r_clue, "c_clue:: ", c_clue, "val:: ", val)
+    # TODO: to forward this knowledge to the LLM for a more accurate hint, maybe store next 2 or 3 actions
+    
     ############################################## call LLM for response
     response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, messages_cache)
     #####
@@ -240,13 +242,13 @@ def record_interactions():
     csv_handler_interaction.update_entry(len(csv_handler_interaction.read_entries())-2, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
     
     # # predict next best step
-    # row_clues, column_clues = count_consecutive_cells(solutionGrid)
-    # print("row_clues:: ", row_clues, "column_clues:: ", column_clues)
-    # # replace all 0s with -1s
-    # prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in prorgessGrid]
-    # solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
-    # r_clue, c_clue, val = solver.recommend_next_action()
-    # solver.display_board()
+    row_clues, column_clues = count_consecutive_cells(solutionGrid)
+    print("row_clues:: ", row_clues, "column_clues:: ", column_clues)
+    # replace all 0s with -1s for empty cells
+    prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in prorgessGrid]
+    solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
+    solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
+    r_clue, c_clue, val = solver.recommend_next_action()
     
     return "Saved interaction data successfully!"
 
