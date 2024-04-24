@@ -80,12 +80,14 @@ class NonogramSolver:
             self.check_solved()                                     # check if the puzzle is solved
     
     
-    def recommend_next_action(self):
+    def recommend_next_action(self, no_next_steps = 1):
         """
         Method that recommends the next cell to fill in the nonogram puzzle based on the current grid progress state.
         The method also considers the last interactions with the grid to prioritize the rows and columns that were last interacted with. (including the rows and columns right next to the last interacted row or column)
         Always look in the vicinity of the last interaction.
         """
+        next_recommended_steps = []
+        
         # step 1: Set the board to be the progress grid
         self.board = self.progress_grid
         
@@ -137,7 +139,12 @@ class NonogramSolver:
                             if not (self.board[ri][ci] == 0 and val == -1 and self.progress_grid[ri][ci] == -1):
                                 # Ignore the cells that should be empty, do not recommend the user to keep a cell empty
                                 print(f'Recommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]')
-                                return ri, ci, val
+                                if no_next_steps > 0:
+                                    next_recommended_steps.append((ri, ci, val))
+                                    no_next_steps -= 1
+                                
+                                if no_next_steps == 0:
+                                    return next_recommended_steps
                                 
                             self.board[ri][ci] = val
                             # If loop not broken, then a cell was completed in that row/column, so remove the other possibilities that do not match that specific cell's state at its supposed location
@@ -148,7 +155,7 @@ class NonogramSolver:
                     self.update_done(row_ind, ind1)
             # check if nonogram grid is completed
             self.check_solved()
-        return -1, -1, -1 # No recommended next step as the grid is solved
+        return next_recommended_steps # No recommended next step as the grid is solved
     
     def nullify_mistakes(self, progress_grid, solution_grid):
         """
