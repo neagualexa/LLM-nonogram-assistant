@@ -83,8 +83,8 @@ class NonogramSolver:
     def recommend_next_action(self):
         """
         Method that recommends the next cell to fill in the nonogram puzzle based on the current grid progress state.
-        
-        TODO: need to find a way to start from the progress grid and solve the puzzle -> create the possibilities based on the progress grid
+        The method also considers the last interactions with the grid to prioritize the rows and columns that were last interacted with. (including the rows and columns right next to the last interacted row or column)
+        Always look in the vicinity of the last interaction.
         """
         # step 1: Set the board to be the progress grid
         self.board = self.progress_grid
@@ -113,10 +113,10 @@ class NonogramSolver:
             # step 5.1.1: First sort the rows and cols by the lowest number of possibilities
             self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
 
+            # step 5.1.2: Get the priority rows and columns based on the last interactions with the grid (also consider the rows and columns right next to the last interacted row or column)
             self.priority_lines = self.get_priority_lines(self.last_interactions)
-            # Step 5.1.2: Then re-sort the combined list (of rows and columns) by priority of interaction
+            # Step 5.1.3: Then re-sort the combined list (of rows and columns) by priority of interaction
             self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
-            # print(f'Priority lines: {self.priority_lines}', "\nPrioirty lowest: ", self.priority_lowest)
 
             # step 5.2: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
             for ind1, _, row_ind in self.priority_lowest:
@@ -179,39 +179,7 @@ class NonogramSolver:
                 if progress[i][j] != solution[i][j] and (progress[i][j] == -1 or progress[i][j] == 0):
                     differences["missing_selection"].append((i, j))                 # cell is empty in the progress grid but should be filled in the solution grid
         return differences
-
-    def get_priority_lines(self, last_interactions):
-        """
-        Method that returns the priority rows and columns based on the last interactions with the grid.
-        
-        Priority means that the solver will first try to solve the rows and columns that were last interacted with.
-        """
-        priority_lines = {
-            "rows": [],
-            "cols": []
-        }
-        
-        for interaction in last_interactions:
-            if interaction == None: continue
-            if not interaction[0] in priority_lines["rows"]:
-                priority_lines["rows"].append(interaction[0])
-            if not interaction[1] in priority_lines["cols"]:
-                priority_lines["cols"].append(interaction[1])
-                
-        return priority_lines
-        
-    def custom_sort_priority(self, item):
-        index, x_value, is_row = item
-        priority = 1  # Default priority (1 means not in the top list)
-        
-        # Assign priority if it's in the priority list
-        if is_row and index in self.priority_lines["rows"]:
-            priority = 0
-        elif not is_row and index in self.priority_lines["cols"]:
-            priority = 0
-        
-        return (priority, x_value)
-                    
+    
     def create_possibilities(self, values, no_of_other):
         """
         Public method that generates all possible sequences of filled and empty cells for each row or column in a nonogram puzzle, 
@@ -255,7 +223,13 @@ class NonogramSolver:
             res_opt = [item for sublist in res_opt for item in sublist][:-1]        # flatten the list of lists, remove the value at the end (only )
             res_opts.append(res_opt)                                                # append the result to the list of possibilities for that one row or column
         return res_opts
-
+    
+    def remove_possibilities(self, possibilities, i, val):
+        """
+        Public method that removes the possibilities that do not match the value of the cell at the given index (impossible solutions for other rows or columns).
+        """
+        return [p for p in possibilities if p[i] == val]
+    
     def select_index_not_done(self, possibilities, row_ind):
         """
         Public method that selects the indices of the rows or columns that have not been completed yet.
@@ -269,6 +243,48 @@ class NonogramSolver:
         else:
             return [(i, n, row_ind) for i, n in enumerate(s) if self.cols_done[i] == 0]
 
+    def get_priority_lines(self, last_interactions):
+        """
+        Method that returns the priority rows and columns based on the last interactions with the grid.
+        
+        Priority means that the solver will first try to solve the rows and columns that were last interacted with.
+        Also introduce the rows and columns that are right next to the last interacted row or column.
+        """
+        priority_lines = {
+            "rows": [],
+            "cols": []
+        }
+        
+        for interaction in last_interactions:
+            if interaction == None: continue
+            if not interaction[0] in priority_lines["rows"]:
+                priority_lines["rows"].append(interaction[0])
+                if interaction[0] + 1 <= self.no_of_rows: priority_lines["rows"].append(interaction[0] + 1)
+                if interaction[0] - 1 >= 0:               priority_lines["rows"].append(interaction[0] - 1)
+            if not interaction[1] in priority_lines["cols"]:
+                priority_lines["cols"].append(interaction[1])
+                if interaction[1] + 1 <= self.no_of_cols: priority_lines["cols"].append(interaction[1] + 1)
+                if interaction[1] - 1 >= 0:               priority_lines["cols"].append(interaction[1] - 1)
+                
+        return priority_lines
+        
+    def custom_sort_priority(self, item):
+        """
+        Method that is used by `sorted()` as a `key` to sort the list of rows and columns by priority of interaction.
+        
+        (i, n, row_ind): tuple of integers (index, number of possibilities, row or column index boolean)
+        """
+        i, n, row_ind = item
+        priority = 1  # Default priority (1 means not in the top list)
+        
+        # Assign priority if it's in the priority list; 0 means it is in the top list (no priority between the top list elements)
+        if row_ind and i in self.priority_lines["rows"]:
+            priority = 0
+        elif not row_ind and i in self.priority_lines["cols"]:
+            priority = 0
+        
+        return (priority, n)
+
     def get_only_one_option(self, values):
         """
         Function identifies which cells in a set of possible nonogram row or column patterns have a consistent value across all possibilities. 
@@ -276,12 +292,36 @@ class NonogramSolver:
         """
         return [(n, np.unique(i)[0]) for n, i in enumerate(np.array(values).T) if len(np.unique(i)) == 1]
 
-    def remove_possibilities(self, possibilities, i, val):
+    def update_done(self, row_ind, idx):
         """
-        Public method that removes the possibilities that do not match the value of the cell at the given index (impossible solutions for other rows or columns).
+        Public method that updates the rows_done or cols_done list when a row or column is completed.
+        0 = not done, 1 = done
         """
-        return [p for p in possibilities if p[i] == val]
+        if row_ind: vals = self.board[idx]
+        else: vals = [row[idx] for row in self.board]
+        if 0 not in vals:
+            if row_ind: self.rows_done[idx] = 1
+            else: self.cols_done[idx] = 1 
 
+    def check_done(self, row_ind, idx):
+        """
+        Public method that checks if row or column `idx` is done.
+        
+        row_ind: boolean (True for row, False for column)
+        rows_done: list of integers (0 = not done, 1 = done)
+        cols_done: list of integers (0 = not done, 1 = done)
+        """
+        if row_ind: return self.rows_done[idx]
+        else: return self.cols_done[idx]
+
+    def check_solved(self):
+        """
+        Method that checks if the nonogram puzzle is solved.
+        Checks if all rows and columns are completed.
+        """
+        if 0 not in self.rows_done and 0 not in self.cols_done:
+            self.solved = True
+            
     def display_board_temporary(self):
         clear_output(wait=True) 
         plt.imshow(self.board, cmap='Greys')
@@ -307,32 +347,6 @@ class NonogramSolver:
             for k in range(self.no_of_cols):
                 increased_board[j * increase_size : (j+1) * increase_size, k * increase_size : (k+1) * increase_size] = self.board[j][k]
         plt.imsave(os.path.join(self.savepath, f'{name}.jpeg'), increased_board, cmap='Greys', dpi=1000)
-
-    def update_done(self, row_ind, idx):
-        """
-        Public method that updates the rows_done or cols_done list when a row or column is completed.
-        0 = not done, 1 = done
-        """
-        if row_ind: vals = self.board[idx]
-        else: vals = [row[idx] for row in self.board]
-        if 0 not in vals:
-            if row_ind: self.rows_done[idx] = 1
-            else: self.cols_done[idx] = 1 
-
-    def check_done(self, row_ind, idx):
-        """
-        Public method that checks if row or column `idx` is done.
-        
-        row_ind: boolean (True for row, False for column)
-        rows_done: list of integers (0 = not done, 1 = done)
-        cols_done: list of integers (0 = not done, 1 = done)
-        """
-        if row_ind: return self.rows_done[idx]
-        else: return self.cols_done[idx]
-
-    def check_solved(self):
-        if 0 not in self.rows_done and 0 not in self.cols_done:
-            self.solved = True
       
       
             

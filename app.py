@@ -243,13 +243,13 @@ def record_interactions():
     
     # # predict next best step
     row_clues, column_clues = count_consecutive_cells(solutionGrid)
-    print("row_clues:: ", row_clues, "column_clues:: ", column_clues)
     # replace all 0s with -1s for empty cells
     prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in prorgessGrid]
     solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
     last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
     solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid, LAST_INTERACTIONS=last_interactions)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
     r_clue, c_clue, val = solver.recommend_next_action()
+    # print("r_clue:: ", r_clue, "c_clue:: ", c_clue, "val:: ", val)
     
     return "Saved interaction data successfully!"
 
