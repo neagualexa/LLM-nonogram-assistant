@@ -93,7 +93,6 @@ class NonogramSolver:
         self.nullify_mistakes(self.progress_grid, self.solution_grid)
         # step 2.2: Set all the empty cells (-1) in the grid to 0 (initial cell) to allow for possibilities to be generated
         self.board = [[0 if cell == -1 else cell for cell in row] for row in self.board]
-        # self.display_board()
         
         # step 3: Defining all possible solutions for every row and col
         self.rows_possibilities = self.create_possibilities(self.ROWS_VALUES, self.no_of_cols)
@@ -106,56 +105,50 @@ class NonogramSolver:
                     self.rows_possibilities[i] = self.remove_possibilities(self.rows_possibilities[i], j, self.board[i][j])
                     self.cols_possibilities[j] = self.remove_possibilities(self.cols_possibilities[j], i, self.board[i][j])
         
-        completed_prev_line = False
         #step 5: Solve the puzzle with the remaining possibilities
         while not self.solved:
             # step 5.1: Order indici by priority and lowest (start with the rows and cols with the lowest number of possibilities -> most likely to have larger clues)
             self.lowest_rows = self.select_index_not_done(self.rows_possibilities, 1)
             self.lowest_cols = self.select_index_not_done(self.cols_possibilities, 0)
-            # step 5.1.1: Sort the rows and cols by the lowest number of possibilities
+            # step 5.1.1: First sort the rows and cols by the lowest number of possibilities
             self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
 
             self.priority_lines = self.get_priority_lines(self.last_interactions)
-            # Step 5.1.2: Re-Sort the combined list by priority and then by X value
+            # Step 5.1.2: Then re-sort the combined list (of rows and columns) by priority of interaction
             self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
-            
-            print(f'Priority lines: {self.priority_lines}', "\nPrioirty lowest: ", self.priority_lowest)
+            # print(f'Priority lines: {self.priority_lines}', "\nPrioirty lowest: ", self.priority_lowest)
 
             # step 5.2: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
-            # order = self.lowest if completed_prev_line else self.priority_lowest # if previous step completed a line, continue with the lowest, else continue with the priority lowest
             for ind1, _, row_ind in self.priority_lowest:
-                print(f'Checking row: {ind1}, col: all [0 indexed]')
                 if not self.check_done(row_ind, ind1):
-                    # if the row or column is not done yet, get the possibilities for the row or column
+                    # If the row or column is not done yet, get the possibilities for the row or column
                     if row_ind: values = self.rows_possibilities[ind1]
                     else:       values = self.cols_possibilities[ind1]
+                    # Then identifiy which cells in a set of possiblities of row/column patterns have a consistent value across all possibilities, and return those cells.
                     same_ind = self.get_only_one_option(values)
                     for ind2, val in same_ind:
-                        # for each cell with only one possible position in line, update the board with the value
+                        # For each cell with only one possible position in row/column, update the board with the value
                         if row_ind: ri, ci = ind1, ind2
                         else:       ri, ci = ind2, ind1 
                         if self.board[ri][ci] == 0:
-                            # only update if the cell is gray (initial cell) or empty
+                            # Check if the cell is not assigned a state -> only update if the cell is an initial cell
                             
                             # print(f'Inconsistency in cell row: {ri}, col: {ci}, current: {self.board[ri][ci]} should be val: {val}!')
                             if not (self.board[ri][ci] == 0 and val == -1 and self.progress_grid[ri][ci] == -1):
-                                # ignore the cells that should be empty
+                                # Ignore the cells that should be empty, do not recommend the user to keep a cell empty
                                 print(f'Recommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]')
                                 return ri, ci, val
                                 
                             self.board[ri][ci] = val
+                            # If loop not broken, then a cell was completed in that row/column, so remove the other possibilities that do not match that specific cell's state at its supposed location
                             if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
                             else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
-                            
-                            # if self.savepath != '':
-                            #     self.save_board()
-                            #     self.n += 1
-                        # else:
-                        #     print('Cell already filled')
+                        
+                    # A new row/column has been fully completed, so mark them as done
                     self.update_done(row_ind, ind1)
-                    completed_prev_line = True
+            # check if nonogram grid is completed
             self.check_solved()
-        return -1, -1, -1 # no recommended next step as the grid is solved
+        return -1, -1, -1 # No recommended next step as the grid is solved
     
     def nullify_mistakes(self, progress_grid, solution_grid):
         """
