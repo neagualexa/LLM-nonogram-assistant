@@ -30,7 +30,7 @@ hint_model          = "Azure Llama 3 8b Instruct" #"Azure Llama 2 70b chat"
 observation_model   = "Azure Llama 3 8b Instruct" #"HF Mixtral-8x7B-Instruct-v0.1"
 position_model      = "Azure Llama 3 8b Instruct" #"HF Mixtral-8x7B-Instruct-v0.1"
 
-system_message = "You are NonoAI, a helpful assistant replying the user's questions. Reply in short sentences."
+system_message = "You are NonoAI, a helpful assistant replying the user's questions regarding Nonogram/Griddler puzzles. Reply in short sentences."
 # system_message = """You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
 #             The user can describe the puzzle or ask for specific tips, and you will guide them through the solving process.
 #             You can also engage in some casual talk, like answering greetings and simple questions like "How/Who are you?". 
