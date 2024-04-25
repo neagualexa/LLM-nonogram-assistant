@@ -3,7 +3,7 @@
 # Credits of original code to: Hennie de Harder
 # NOTES:
 #       for nonograms with only one solution
-#       0 = initial cell, 1 = filled cell, -1 = empty cell
+#       0 = null cell, 1 = filled cell, -1 = empty cell
 #       0 indexed grid and constraints
 #       puzzle is being completed from left to right and top to bottom
 
@@ -32,6 +32,7 @@ class NonogramSolver:
         self.solution_grid = SOLUTION_GRID
         self.last_interactions = LAST_INTERACTIONS
         self.priority_lines = {}
+        self.process_explained = []
         
         self.savepath = savepath
         if self.savepath != '': self.n = 0
@@ -66,7 +67,7 @@ class NonogramSolver:
                         if row_ind: ri, ci = ind1, ind2                 # if row
                         else:       ri, ci = ind2, ind1                 # if column
                         
-                        # update the board only for the cell that is gray (initial cell)
+                        # update the board only for the cell that is gray (null cell)
                         if self.board[ri][ci] == 0:
                             self.board[ri][ci] = val                # update the cell with the value
                             if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)   # remove the possibilities for the column depending on the value of the cell
@@ -87,13 +88,14 @@ class NonogramSolver:
         Always look in the vicinity of the last interaction.
         """
         next_recommended_steps = []
+        self.process_explained = [] # reset the process explained
         
         # step 1: Set the board to be the progress grid
         self.board = self.progress_grid
         
-        # step 2: Find all the differences between the progress grid and the solution grid and nullify the mistakes in the board (set mistake cells to 0 (initial cell))
+        # step 2: Find all the differences between the progress grid and the solution grid and nullify the mistakes in the board (set mistake cells to 0 (null cell))
         self.nullify_mistakes(self.progress_grid, self.solution_grid)
-        # step 2.2: Set all the empty cells (-1) in the grid to 0 (initial cell) to allow for possibilities to be generated
+        # step 2.2: Set all the empty cells (-1) in the grid to 0 (null cell) to allow for possibilities to be generated
         self.board = [[0 if cell == -1 else cell for cell in row] for row in self.board]
         
         # step 3: Defining all possible solutions for every row and col
@@ -117,27 +119,32 @@ class NonogramSolver:
 
             # step 5.1.2: Get the priority rows and columns based on the last interactions with the grid (also consider the rows and columns right next to the last interacted row or column)
             self.priority_lines = self.get_priority_lines(self.last_interactions)
+            self.process_explained.append("- user interacted last with: " + str(self.last_interactions) + "\n")
             # Step 5.1.3: Then re-sort the combined list (of rows and columns) by priority of interaction
             self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
 
             # step 5.2: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
             for ind1, _, row_ind in self.priority_lowest:
                 if not self.check_done(row_ind, ind1):
+                    self.process_explained.append("-- \talgo pass through the rows or cols with least possibilities of combinations of completions & are not done yet")
+                    self.process_explained.append(f"-- \tcurrent {'row' if row_ind else 'column'} {ind1}.")
                     # If the row or column is not done yet, get the possibilities for the row or column
                     if row_ind: values = self.rows_possibilities[ind1]
                     else:       values = self.cols_possibilities[ind1]
                     # Then identifiy which cells in a set of possiblities of row/column patterns have a consistent value across all possibilities, and return those cells.
                     same_ind = self.get_only_one_option(values)
+                    self.process_explained.append(f"-- \tget the cells that have only one possible value across all possibilities in the {'row' if row_ind else 'column'} {ind1}: ({'column' if row_ind else 'row'}, value) {same_ind}.")
+                    
                     for ind2, val in same_ind:
                         # For each cell with only one possible position in row/column, update the board with the value
                         if row_ind: ri, ci = ind1, ind2
                         else:       ri, ci = ind2, ind1 
                         if self.board[ri][ci] == 0:
-                            # Check if the cell is not assigned a state -> only update if the cell is an initial cell
-                            
+                            # Check if the cell is not assigned a state -> only update if the cell is an null cell
                             # print(f'Inconsistency in cell row: {ri}, col: {ci}, current: {self.board[ri][ci]} should be val: {val}!')
                             if not (self.board[ri][ci] == 0 and val == -1 and self.progress_grid[ri][ci] == -1):
                                 # Ignore the cells that should be empty, do not recommend the user to keep a cell empty
+                                self.process_explained.append(f">--- \tCell on row: {ri}, col: {ci} is a null cell with one possible value accross all combinations of the {'row' if row_ind else 'column'}, so update the cell with the value {val} ({'filled' if val == 1 else 'empty' }). Recommend the user to change the cell state!!!!!")
                                 print(f'Recommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]')
                                 if no_next_steps > 0:
                                     next_recommended_steps.append((ri, ci, val))
@@ -150,24 +157,26 @@ class NonogramSolver:
                             # If loop not broken, then a cell was completed in that row/column, so remove the other possibilities that do not match that specific cell's state at its supposed location
                             if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
                             else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
-                        
+                            self.process_explained.append(f"--- \tRemove the possibilities that do not match the value of the cell at the given location (row: {ri}, col: {ci}, val: {val})(remove impossible solutions for other rows or columns).")
                     # A new row/column has been fully completed, so mark them as done
                     self.update_done(row_ind, ind1)
+                    self.process_explained.append(f"-- \tUpdate that {'row' if row_ind else 'column' } {ind1} is completed with all cells.\n")
             # check if nonogram grid is completed
             self.check_solved()
+            self.process_explained.append(f"\n-- \tCheck if the nonogram puzzle is solved. {self.solved}")
         return next_recommended_steps # No recommended next step as the grid is solved
     
     def nullify_mistakes(self, progress_grid, solution_grid):
         """
-        Method that finds the differences between the progress grid and the solution grid and nullifies the mistakes in the board by setting the cell to 0 (initial cell).
+        Method that finds the differences between the progress grid and the solution grid and nullifies the mistakes in the board by setting the cell to 0 (null cell).
         Hence, those cell will be reconsidered in forming the line filling possibilities.
         """
         differences = self.compare_grids(progress_grid, solution_grid)
         
         for diff in differences["wrong_selection"]:
-            self.board[diff[0]][diff[1]] = 0        # set the cell to 0 (initial cell) (0 indexed)
+            self.board[diff[0]][diff[1]] = 0        # set the cell to 0 (null cell) (0 indexed)
         for diff in differences["missing_selection"]:
-            self.board[diff[0]][diff[1]] = 0        # set the cell to 0 (initial cell) (0 indexed)
+            self.board[diff[0]][diff[1]] = 0        # set the cell to 0 (null cell) (0 indexed)
             
     def compare_grids(self, progress, solution):
         """
@@ -358,7 +367,7 @@ class NonogramSolver:
       
             
 # if __name__ == '__main__':
-#     # 0 = initial cell, 1 = filled cell, -1 = empty cell
+#     # 0 = null cell, 1 = filled cell, -1 = empty cell
 #     PROGRESS_GRID = [[0, 1, 1, 0, 0, 0, 0, 1, 1, 0], [1, 1, 0, 1, 1, 1, 1, 0, 1, 1], [1, 0, 1, 1, 1, 0, 1, 1, 0, 1], [0, 1, 1, 1, 1, 0, 1, 1, 1, 0], [0, 1, 1, 1, 1, 0, 1, 1, 1, 0], [0, 1, 1, 1, 0, 1, 1, 1, 1, 0], [0, 1, 1, 0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0, 0], [0, 0, 1, 1, 0, 0, 1, 1, 0, 0]]
 #     PROGRESS_GRID =  [[-1 if cell == 0 else cell for cell in row] for row in PROGRESS_GRID]
 #     ROWS_VALUES, COLS_VALUES = count_consecutive_cells(PROGRESS_GRID)
