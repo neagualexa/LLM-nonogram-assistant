@@ -15,7 +15,8 @@ from data_collection import csv_handler_progress, csv_handler_meaning, csv_handl
 from grid_difference_checker import count_consecutive_cells
 from progress_tracking import (
     recommend_next_steps,
-    calculate_progress, track_user_level_progress
+    calculate_progress, track_user_level_progress, define_hint_level,
+    user_level_progress
 )
 
 app = Flask(__name__)
@@ -133,24 +134,36 @@ def check_puzzle_progress():
         # count_entries = len(csv_handler_progress.read_entries())
         new_entry = {'id': hint_id, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
-        
-    ##### Fetch the last interactions
-    last_interactions_entry = csv_handler_interaction.read_entries()[-1]
-    lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) if last_interactions_entry['Cell_1'] else None # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
-    lastPressedCell_2 = ast.literal_eval(last_interactions_entry['Cell_2']) if last_interactions_entry['Cell_2'] else None
-    lastPressedCell_3 = ast.literal_eval(last_interactions_entry['Cell_3']) if last_interactions_entry['Cell_3'] else None
-    
-    # predict next best steps
-    row_clues, column_clues = count_consecutive_cells(solutionCellStates)
-    last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
-    next_recommended_steps = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
-    
-    # calculate progress of user
+
+    # calculate progress of user and update the hint level accordingly
     progress = calculate_progress(progressGrid=cellStates, solutionGrid=solutionCellStates)
     track_user_level_progress(username, level, progress)
+    define_hint_level(username, level)
+    # print("user_level_progress:: ", user_level_progress, progress)
+    hint_level = user_level_progress[username]["hint_level"]
     
-    ############################################## call LLM for response
-    response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, messages_cache)
+    if hint_level > 0:
+        ##### Fetch the last interactions
+        last_interactions_entry = csv_handler_interaction.read_entries()[-1]
+        lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) if last_interactions_entry['Cell_1'] else None # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
+        lastPressedCell_2 = ast.literal_eval(last_interactions_entry['Cell_2']) if last_interactions_entry['Cell_2'] else None
+        lastPressedCell_3 = ast.literal_eval(last_interactions_entry['Cell_3']) if last_interactions_entry['Cell_3'] else None
+        
+        # predict next best steps
+        row_clues, column_clues = count_consecutive_cells(solutionCellStates)
+        last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
+        next_recommended_steps = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+    
+    ############################################## call LLM for response depending on the hint level
+    if hint_level == 0:
+        response_llm = "General rules hint"
+        # TODO: call LLM for general rules hint
+    elif hint_level == 1:
+        """Directional hint"""
+        response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, messages_cache)
+    elif hint_level == 2:
+        response_llm = "Conclusive hint"
+        # TODO: call LLM for conclusive hint
     #####
     # try:
     #     url = 'http://localhost:5005/verbal_hint'
