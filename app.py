@@ -12,10 +12,11 @@ from azure_inference_chat import callAzureLLM, callLLM_progress_checker         
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
 from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
-from grid_difference_checker import zeroToOneIndexed, count_consecutive_cells
-from nonogram_solver import NonogramSolver
-
-from system_prompt import system_prompt_nonograms
+from grid_difference_checker import count_consecutive_cells
+from progress_tracking import (
+    recommend_next_steps,
+    calculate_progress, track_user_level_progress
+)
 
 app = Flask(__name__)
 
@@ -58,7 +59,8 @@ def send_message():
     print('user_message:: ', user_message)
     
     ############################################## call LLM for response
-    response, _ = callAzureLLM(user_message, system_message=system_prompt_nonograms(), max_tokens=50, past_messages=messages_cache)
+    system_prompt = "You are NonoAI, a helpful assistant replying the user's questions regarding Nonogram/Griddler puzzles. Reply in short sentences."
+    response, _ = callAzureLLM(user_message, system_message=system_prompt, max_tokens=50, past_messages=messages_cache)
     #####
     # url = 'http://127.0.0.1:5001/predict'
     # data = {'input_data': user_message}
@@ -134,20 +136,18 @@ def check_puzzle_progress():
         
     ##### Fetch the last interactions
     last_interactions_entry = csv_handler_interaction.read_entries()[-1]
-    lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
-    lastPressedCell_2 = ast.literal_eval(last_interactions_entry['Cell_2'])
-    lastPressedCell_3 = ast.literal_eval(last_interactions_entry['Cell_3'])
+    lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) if last_interactions_entry['Cell_1'] else None # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
+    lastPressedCell_2 = ast.literal_eval(last_interactions_entry['Cell_2']) if last_interactions_entry['Cell_2'] else None
+    lastPressedCell_3 = ast.literal_eval(last_interactions_entry['Cell_3']) if last_interactions_entry['Cell_3'] else None
     
-    # predict next best step
+    # predict next best steps
     row_clues, column_clues = count_consecutive_cells(solutionCellStates)
-    # replace all 0s with -1s for empty cells
-    prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in cellStates]
-    solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionCellStates]
     last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
-    solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid, LAST_INTERACTIONS=last_interactions)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
-    next_recommended_steps = solver.recommend_next_action(no_next_steps=3)
-    next_recommended_steps = zeroToOneIndexed(next_recommended_steps)       # convert to 1-indexed
-    print("next_recommended_steps:: ", next_recommended_steps)
+    next_recommended_steps = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+    
+    # calculate progress of user
+    progress = calculate_progress(progressGrid=cellStates, solutionGrid=solutionCellStates)
+    track_user_level_progress(username, level, progress)
     
     ############################################## call LLM for response
     response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, messages_cache)
@@ -179,8 +179,6 @@ def check_puzzle_progress():
         messages_cache.insert(0, (m for m in format_message(new_message)))
 
     redirect('/')
-    # refresh page
-    # return redirect('/')
     return response_llm
 
 @app.route('/verbalise_hint', methods=['POST'])
@@ -235,35 +233,28 @@ def record_interactions():
     lastPressedCell_3 = interactions["lastPressedCell_3"]
     solutionGrid = interactions["solutionGrid"]
     solutionGrid = ast.literal_eval(solutionGrid)
-    prorgessGrid = interactions["progressGrid"]
-    prorgessGrid = ast.literal_eval(prorgessGrid)
-    
-    # top row and left column are indexed 0
-    # [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3] = zeroToOneIndexed([lastPressedCell_1, lastPressedCell_2, lastPressedCell_3])
+    progressGrid = interactions["progressGrid"]
+    progressGrid = ast.literal_eval(progressGrid)
     
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
     ##### Save the data to the CSV Interaction database
-    new_entry = {'id': len(csv_handler_interaction.read_entries()), 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': prorgessGrid, 'Target_row': 'x', 'Target_col': 'y'}    
+    new_entry = {'id': len(csv_handler_interaction.read_entries()), 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y'}    
     csv_handler_interaction.add_entry(new_entry)
     
     #### update target cell on previous entry
     csv_handler_interaction.update_entry(len(csv_handler_interaction.read_entries())-2, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
     
-    # predict next best step
-    row_clues, column_clues = count_consecutive_cells(solutionGrid)
-    # replace all 0s with -1s for empty cells
-    prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in prorgessGrid]
-    solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
-    last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
-    solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid, LAST_INTERACTIONS=last_interactions)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
-    next_recommended_steps = solver.recommend_next_action(no_next_steps=4)
-    # save process_explained into empty file
-    with open('data/nonogram_solver/process_explained.txt', 'w') as f:
-        # empty file
-        f.write("")
-        for line in solver.process_explained:
-            f.write("%s\n" % line)
-    print("next_recommended_steps:: ", next_recommended_steps)
+    # predict next best steps
+    # row_clues, column_clues = count_consecutive_cells(solutionGrid)
+    # last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
+    # next_recommended_steps, process_explained = recommend_next_steps(no_next_steps=3, progressGrid=progressGrid, solutionGrid=solutionGrid, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+    # # save process_explained into empty file
+    # with open('data/nonogram_solver/process_explained.txt', 'w') as f:
+    #     # empty file
+    #     f.write("")
+    #     for line in process_explained:
+    #         f.write("%s\n" % line)
+    # print("next_recommended_steps:: ", next_recommended_steps)
     
     return "Saved interaction data successfully!"
 
