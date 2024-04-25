@@ -76,6 +76,10 @@ def print_format_cellStates(cellStates, solutionCellStates):
     #     return formatted_grid, formatted_Solution_grid
 
 def compare_grids(user_progress, solution):
+    """
+    Method to compare the user's progress with the solution grid and return the differences.
+    1 indexed for human/LLM readability
+    """
     differences = {
         "wrong_selection": [],
         "missing_selection": []
@@ -87,10 +91,12 @@ def compare_grids(user_progress, solution):
         for j in range(len(user_progress[0])):
             if user_progress[i][j] != solution[i][j] and (user_progress[i][j] in filled):
                 # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
-                differences["wrong_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
+                # differences["wrong_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
+                differences["wrong_selection"].append((i+1, j+1))                   # cell is filled in the progress grid but should be empty in the solution grid (preserve row/column order: top left is (1,1))
             if user_progress[i][j] != solution[i][j] and (user_progress[i][j] in empty):
                 # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
-                differences["missing_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
+                # differences["missing_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
+                differences["missing_selection"].append((i+1, j+1))                 # cell is empty in the progress grid but should be filled in the solution grid (preserve row/column order: top left is (1,1))
     return differences
 
 def random_element(wrong_selections, missing_selections):
@@ -114,6 +120,62 @@ def generate_mistake_markers(differences):
     return feedback_wrong, feedback_missing
 
 def describe_point_position(position, width, height):
+    """
+    Method to describe the position of a point in a grid with the top left corner as the origin.
+    """
+    row, col = position
+    description = []
+
+    # Check if the point is outside of the grid
+    if col < 1 or col > width or row < 1 or row > height:
+        return "Point is outside of the grid."
+
+    # Corners
+    if col == 1 and row == 1:
+        description.append("top-left corner")
+    elif col == 1 and row == height:
+        description.append("bottom-left corner")
+    elif col == width and row == 1:
+        description.append("top-right corner")
+    elif col == width and row == height:
+        description.append("bottom-right corner")
+
+    # Edges
+    if col == 1:
+        description.append("left edge")
+    elif col == width:
+        description.append("right edge")
+    if row == 1:
+        description.append("top edge")
+    elif row == height:
+        description.append("bottom edge")
+
+    # Quadrants
+    half_width = width // 2
+    half_height = height // 2
+
+    if col <= half_width and row <= half_height:
+        description.append("top-left quadrant")
+    elif col > half_width and row <= half_height:
+        description.append("top-right quadrant")
+    elif col <= half_width and row > half_height:
+        description.append("bottom-left quadrant")
+    elif col > half_width and row > half_height:
+        description.append("bottom-right quadrant")
+
+    # Rows and columns
+    if row == half_height:
+        description.append("middle row")
+    elif col == half_width:
+        description.append("middle column")
+
+    # Random choice from the collected descriptions
+    return random.choice(description)
+
+def describe_point_position_bottom_left(position, width, height):
+    """
+    Method to describe the position of a point in a grid, with the bottom left corner as the origin.
+    """
     x, y = position
     description = []
     # 1-indexed
@@ -169,8 +231,6 @@ def describe_point_position(position, width, height):
     description.append( f"{row_desc} rows, {col_desc} columns")
     description.append( f"{row_desc}, {col_desc} side")
     description.append( f"{row_desc}, {col_desc} area")
-    # description.append( f"{row_desc}")
-    # description.append( f"{col_desc}")
     
     return random.choice(description)
 
@@ -209,9 +269,16 @@ def count_consecutive_cells(grid):
 
 
 def zeroToOneIndexed(cells):
+    """
+    Method to convert 0-indexed cells to 1-indexed cells
+    """
     for i, cell in enumerate(cells):
-        # check if cell is empty
-        if not cell:
+        if not cell:                                            # check if cell is empty
             continue
-        cells[i] = (cell[0]+1, cell[1]+1, cell[2], cell[3]) # convert to 1-indexed
+        if len(cell) == 2:
+            cells[i] = (cell[0]+1, cell[1]+1)                   # convert to 1-indexed
+        elif len(cell) == 3:
+            cells[i] = (cell[0]+1, cell[1]+1, cell[2])          # convert to 1-indexed, keep the third element as state of cell
+        elif len(cell) == 4:
+            cells[i] = (cell[0]+1, cell[1]+1, cell[2], cell[3]) # convert to 1-indexed
     return cells

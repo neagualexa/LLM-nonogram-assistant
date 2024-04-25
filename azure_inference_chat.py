@@ -12,7 +12,8 @@ from system_prompt import (
     system_prompt, 
     system_prompt_positioning, system_prompt_positioning_llama, 
     system_prompt_observe_around, system_prompt_observe_around_llama,
-    system_prompt_hint, system_prompt_hint_llama
+    system_prompt_hint, system_prompt_hint_llama,
+    system_prompt_nonograms
 )
 from grid_difference_checker import string_to_lists_grids, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
 from puzzle_checker_inference import component_pipeline_query_hf
@@ -111,7 +112,7 @@ def callAzureLLM(user_message, system_message=system_message, max_tokens=100, pa
         
 ################ Function call for progress feedback ################
     
-def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, past_messages=[]):
+def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, past_messages=[]):
         
     try:
         # cellStates, solutionCellStates, width, height = string_to_lists_grids(cellStates, solutionCellStates) # already in list format
@@ -205,9 +206,9 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             # print("HF - hint LLM:: ", hint_response)
             
             #     3      Use the observation and position description to give feedback using Azure LLM
-            user_message = "Give me a hint in 1-2 sentences. Where did I make a mistake?"
+            user_message = "Give me a hint in 1-2 sentences. What can I do next?"
             # user_message = "Give me a hint in 1-2 sentences based on the observation. Make sure to say where I made a mistake. Start with 'Hint:'."
-            system_message_hint = system_prompt_hint_llama(positioning_response, observation_response)
+            system_message_hint = system_prompt_hint_llama(positioning_response, observation_response, next_steps=next_recommended_steps, solutionCellStates=solutionCellStates)
             hint_response, hint_latency = callAzureLLM(user_message, system_message=system_message_hint, max_tokens=50, past_messages=[])
             # print("Llama2 - hint LLM:: ", hint_response)
             # Reshaping the response

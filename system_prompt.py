@@ -16,8 +16,11 @@ def system_prompt_observe_around_llama(height, width, position, positioning_area
 def system_prompt_hint(position_description_rephrased, observation):
     return sys_hint.format(position_description_rephrased=position_description_rephrased, observation=observation)
 
-def system_prompt_hint_llama(position_description_rephrased, observation):
-    return sys_hint_llama.format(position_description_rephrased=position_description_rephrased, observation=observation)
+def system_prompt_hint_llama(position_description_rephrased, observation, next_steps, solutionCellStates):
+    return sys_hint_llama.format(position_description_rephrased=position_description_rephrased, observation=observation, next_steps=next_steps, solutionCellStates=solutionCellStates)
+
+def system_prompt_nonograms():
+    return sys_nonograms
 
 ######### System Prompts #########
 # receives simple descriptions of the location of a point in a grid and rephrases them
@@ -50,7 +53,7 @@ Grid:
 {solutionCellStates}
 Observation: '"""
 
-sys_observe_around_llama = """You are observing a 2D grid of size {height}x{width}. The grid is represented by binary data where 0 represents an empty cell and 1 represents a filled cell. The grid is 1-indexed, meaning the first row and column are indexed as 1. First row is at the bottom and first column is at the left of the grid.
+sys_observe_around_llama = """You are observing a 2D grid of size {height}x{width}. The grid is represented by binary data where 0 represents an empty cell and 1 represents a filled cell. The grid is 1-indexed, meaning the first row and column are indexed as 1. 
 
 Observe the cells in the surrounding area. Are majority of cells filled or empty? Are there any patterns in the area? 
 
@@ -60,7 +63,7 @@ Surronding Area: '{positioning_area}'
 Grid:
 {solutionCellStates}"""
 # Position of cell: {position}
-
+# First row is at the bottom and first column is at the left of the grid.
 
 sys_hint_llama = """You're NonoAI, an assistant helping in solving a Griddler (or Nonogram) puzzle, which is a type of logic puzzle. In a Nonogram puzzle, the goal is to fill in cells in a grid to create a picture or pattern. The numbers on the top & left sides of the grid indicate how many consecutive filled cells there are in each row or column, separated by at least one empty cell. The completed grid reveals a hidden image or pattern.
 
@@ -68,6 +71,21 @@ Explain the errors and suggest corrective actions based on the observation and l
 
 Location area of mistake: '{position_description_rephrased}'
 Observation: '{observation}'"""
+sys_hint_llama_next_steps = """You're NonoAI, an assistant helping in solving a Nonogram (or Griddler) puzzle.
+
+Nonogram rules: In a Nonogram puzzle, the goal is to fill in cells in a grid to create a picture or pattern. The numbers on the top & left sides of the grid indicate how many consecutive filled cells there are in each row or column, separated by at least one empty cell. The completed grid reveals a hidden image or pattern.
+
+Suggest corrective actions based on the observation and location area of the mistake. Your goal is to provide a helpful hint based on the known information below.
+
+Base your hint on the next best steps the user should take. Their format is [(row, column, value)], where value of -1 means the cell should be empty and value of 1 means cell should be filled.
+
+Refer to row and column numbers as directions in the grid (top, bottom, left, right) and use terms like 'near', 'around', 'between', 'next to', 'adjacent to', 'beside', 'close to', 'opposite', 'in the middle of', 'at the edge of', 'in the corner of', etc.
+
+Be concise and clear in your hint. Start your hint with 'Considering the '.
+
+Next Steps: '{next_steps}'
+Grid:
+{solutionCellStates}"""
 
 sys_hint = """You're NonoAI, an assistant helping the user in solving a Griddler (or Nonogram) puzzle, which is a type of logic puzzle. In a Nonogram puzzle, the goal is to fill in cells in a grid to create a picture or pattern. The numbers on the top & left sides of the grid indicate how many consecutive filled cells there are in each row or column, separated by at least one empty cell. The completed grid reveals a hidden image or pattern.
 
@@ -209,7 +227,21 @@ User progress:
 
 Solution: 
 {solutionCellStates}
+"""
 
+# very high level system prompt only explaining the concept of nonograms and requesting hints based on this knowledge
+sys_nonograms="""You are a Nonogram puzzle master solver.
 
+You know the following about Nonograms:
+- Numbers, shown on the left and above the crossword - describe the groups of painted squares (which go in sequence, no blanks) horizontally and vertically accordingly. The order of these numbers describes the order of location of these groups, but it is unknown where each group starts and finishes (in fact it is the task of the puzzle to define their location). Each separate number means a separate group of the given size (i.e. number 5 - means a group of five painted squares in sequence, 1 - a group of only one painted square). The groups are separated by at least one empty square.
+- The main requirement to Nonograms is that the crossword should have only one logical solution, achieved without any “guessing” (method of trial and error).
+
+How to solve Nonograms:
+- To solve a Nonogram a person should look at each line/column separately, always moving to the next columns and lines. In so doing the process of solving in each line/column comes to the following:
+- To define the squares which are sure to be painted (with any possible location of the groups) - so we fill them.
+- To define the squares in which it is impossible to have painted squares - such squares are marked with a cross (sometimes a bullet point is used instead of a cross).
+To define the numbers, which location is already identified - usually these numbers are crossed out.
+
+Start with "Hint: ". Answer with only one short sentence.
 
 """
