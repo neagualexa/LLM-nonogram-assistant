@@ -119,10 +119,19 @@ def callLLM_general_hint(hint_id, past_messages=[]):
     try:
         system_message_general_hint = system_prompt_general_hint()
         user_message = "I am a beginner and need some help. Can you give me a NEW hint?"
-        response, _ = callAzureLLM(user_message, system_message=system_message_general_hint, max_tokens=70, past_messages=past_messages)
+        response, latency = callAzureLLM(user_message, system_message=system_message_general_hint, max_tokens=70, past_messages=past_messages)
         print("callLLM_general_hint:: response:: ", response)
         if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
-        response = response.split('\n')[0].strip()                 # remove ending whitespace
+        response = response.split('\n')[0].strip()                          # remove ending whitespace
+        response = remove_after_last_punctuation(response)                  # remove unfinished sentences
+        
+        try:
+            ############ Save CSV entry
+            new_entry_attributes = {'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
+            csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
+        except Exception as e:
+            print("Error in saving CSV entry:: ", e)   
+        
         return response
     except Exception as e:
         print("callLLM_general_hint:: The request failed with status code: " + str(e))
@@ -246,7 +255,6 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             
             try:
                 ############ Save CSV entry
-                # csv_count_entries = len(csv_handler_progress.read_entries()) - 1
                 new_entry_attributes = {'Position': random_position, 'Hint_Response': hint_response, 'Observation_Response': observation_response, 'Positioning_Response': positioning_response, 'Position_Description': position_description, 'Overall_Latency': overall_latency, 'Hint_Latency': hint_latency, 'Observation_Latency': observation_latency, 'Position_Latency': positioning_latency, 'Hint_Model': hint_model, 'Observation_Model': observation_model, 'Position_Model': position_model, 'Mistakes_per_Hint_Wrong': len(wrong_selections), 'Mistakes_per_Hint_Missing': len(missing_selections)}
                 csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
             except Exception as e:
@@ -282,11 +290,19 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
             #     1      Use the next recommended steps to give a conclusive hint using Azure LLM
             user_message = "What is the next step to solve the puzzle?"
             system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
-            response, _ = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=30, past_messages=[])
+            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
             print("callLLM_conclusive_hint:: response:: ", response)
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
             response = response.split('\n')[0].strip()                          # remove ending whitespace
             response = remove_after_last_punctuation(response)                  # remove unfinished sentences
+            
+            try:
+                ############ Save CSV entry
+                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
+                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
+            except Exception as e:
+                print("Error in saving CSV entry:: ", e) 
+            
             return response
         
     except Exception as e:

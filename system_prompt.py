@@ -40,8 +40,10 @@ Start your hint with 'Hint: ' and keep it short and simple.
 Do not give the same hint twice.
 
 Here are some rules for a new player to consider:
-- The rows or columns that have the highest number as their clues are the best to start with.
+- The rows or columns that have the biggest number as their clues are the best to start with.
 - Complete the cells that have a definite location first.
+- Avoid guessing, there is only one logical solution.
+- Do not start with the rows or columns that have the smallest sum of the clues. They are the hardest to solve.
 - The rows or columns that have the sum of the clues the largest are the easiest to solve.
 - Always remember there is at least one empty square between the groups of filled cells.
 - When deciding on the rows or columns to start with, sum up the clues and at least one empty square between the group.

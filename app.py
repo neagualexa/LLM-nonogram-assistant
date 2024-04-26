@@ -112,12 +112,6 @@ def check_puzzle_progress():
     username = puzzle_progress['username']
     level = puzzle_progress['level']
     hint_id = puzzle_progress['hint_id']
-    
-    ##### Save the data to the CSV Progress database
-    if not completed:
-        # count_entries = len(csv_handler_progress.read_entries())
-        new_entry = {'id': hint_id, 'User': username, 'Level': level, 'Position': 'test', 'Hint_Response': 'test', 'Observation_Response': 'test', 'Positioning_Response': 'test', 'Position_Description': 'test', 'Overall_Latency': 'test', 'Hint_Latency': 'test', 'Observation_Latency': 'test', 'Position_Latency': 'test', 'Hint_Model': 'test', 'Observation_Model': 'test', 'Position_Model': 'test', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-        csv_handler_progress.add_entry(new_entry)
 
     # calculate progress of user and update the hint level accordingly
     progress = calculate_progress(progressGrid=cellStates, solutionGrid=solutionCellStates)
@@ -129,16 +123,26 @@ def check_puzzle_progress():
     
     if hint_level > 0:
         ##### Fetch the last interactions
-        last_interactions_entry = csv_handler_interaction.read_entries()[-1]
-        lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) if last_interactions_entry['Cell_1'] else None # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
-        lastPressedCell_2 = ast.literal_eval(last_interactions_entry['Cell_2']) if last_interactions_entry['Cell_2'] else None
-        lastPressedCell_3 = ast.literal_eval(last_interactions_entry['Cell_3']) if last_interactions_entry['Cell_3'] else None
-        
-        # predict next best steps
-        row_clues, column_clues = count_consecutive_cells(solutionCellStates)
-        last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
-        next_recommended_steps, _ = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+        if len(csv_handler_interaction.read_entries()) == 0:
+            hint_level = 0
+            next_recommended_steps = []
+        else:
+            last_interactions_entry = csv_handler_interaction.read_entries()[-1]
+            lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) if last_interactions_entry['Cell_1'] else None # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
+            lastPressedCell_2 = ast.literal_eval(last_interactions_entry['Cell_2']) if last_interactions_entry['Cell_2'] else None
+            lastPressedCell_3 = ast.literal_eval(last_interactions_entry['Cell_3']) if last_interactions_entry['Cell_3'] else None
+            
+            # predict next best steps
+            row_clues, column_clues = count_consecutive_cells(solutionCellStates)
+            last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
+            next_recommended_steps, _ = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
+    ##### Save the data to the CSV Progress database
+    if not completed:
+        # count_entries = len(csv_handler_progress.read_entries())
+        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': '', 'Hint_Response': '', 'Observation_Response': '', 'Positioning_Response': '', 'Position_Description': '', 'Overall_Latency': '', 'Hint_Latency': '', 'Observation_Latency': '', 'Position_Latency': '', 'Hint_Model': '', 'Observation_Model': '', 'Position_Model': '', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        csv_handler_progress.add_entry(new_entry)
+        
     ############################################## call LLM for response depending on the hint level
     messages_cache = format_history(fetch_last_5_messages_cached())
     response_llm = ""
@@ -151,7 +155,6 @@ def check_puzzle_progress():
     elif hint_level == 2:
         "Conclusive hint"
         response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)
-        # TODO: call LLM for conclusive hint
     #####
     # try:
     #     url = 'http://localhost:5005/verbal_hint'
