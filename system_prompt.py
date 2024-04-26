@@ -22,8 +22,12 @@ def system_prompt_hint_llama(position_description_rephrased, observation, next_s
 def system_prompt_nonograms():
     return sys_nonograms
 
+######## Final System Prompts ########
 def system_prompt_general_hint():
     return sys_general_hint
+
+def system_prompt_directional_hint(position_description, next_steps, height, width):
+    return sys_directional_hint.format(position_description=position_description, next_steps=next_steps, height=height, width=width)
 
 def system_prompt_conclusive_hint(next_steps):
     return sys_conclusive_hint.format(next_steps=next_steps)
@@ -51,6 +55,22 @@ Here are some rules for a new player to consider:
 """
 
 ######### System Prompts DIRECTIONAL HINT LEVEL 1 #########
+sys_directional_hint = """You are a master solver of nonogram puzzles. You know every best strategy and rule to solve a nonogram puzzle.
+
+...
+
+Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.
+
+Next Steps: {next_steps}
+
+Here are some examples of hints:
+- There are a couple of definite cells on row X
+- Try considering both rows and columns, do not get stuck on one
+- Maybe there are still some rows that sum to {height}
+- Take a look in area X of the grid
+- Consider backtracking in your tracks, maybe crosscheck you solution
+"""
+
 # receives simple descriptions of the location of a point in a grid and rephrases them
 sys_positioning = """Your task is to rephrase the description of the location of a cell in a {height}x{width} grid. 
 Focus on providing a similar description using different words or phrases and formulate a sentence. Use concise and clear language. 

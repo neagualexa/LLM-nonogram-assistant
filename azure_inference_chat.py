@@ -16,6 +16,7 @@ from system_prompt import (
     system_prompt_nonograms,
 
     system_prompt_general_hint,
+    system_prompt_directional_hint,
     system_prompt_conclusive_hint
 )
 from grid_difference_checker import string_to_lists_grids, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
@@ -119,8 +120,10 @@ def callLLM_general_hint(hint_id, past_messages=[]):
     try:
         system_message_general_hint = system_prompt_general_hint()
         user_message = "I am a beginner and need some help. Can you give me a NEW hint?"
+        
         response, latency = callAzureLLM(user_message, system_message=system_message_general_hint, max_tokens=70, past_messages=past_messages)
         print("callLLM_general_hint:: response:: ", response)
+        
         if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
         response = response.split('\n')[0].strip()                          # remove ending whitespace
         response = remove_after_last_punctuation(response)                  # remove unfinished sentences
@@ -139,7 +142,113 @@ def callLLM_general_hint(hint_id, past_messages=[]):
 
 ################
 ################ Function call for progress feedback : """Directional hint"""    HINT LEVEL : 1 ################
+
+def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, past_messages=[]):
+    """
+    Function to call the Azure LLM for progress feedback with a directional hint.
+    The directional aspect depends on the next few best steps it is predicted for the user to take in order to solve the puzzle.
+    Returns directional instructions to the user based on the next recommended steps (e.g. position in the grid, row number).
+    """
+    try:
+        if completed:
+            return "The puzzle is already completed. No further steps needed."
+        else:
+            system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps)
+            user_message = "Guide me to the next step in the puzzle."
+            
+            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
+            print("callLLM_conclusive_hint:: response:: ", response)
+            
+            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+            response = response.split('\n')[0].strip()                          # remove ending whitespace
+            response = remove_after_last_punctuation(response)                  # remove unfinished sentences
+            
+            try:
+                ############ Save CSV entry
+                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
+                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
+            except Exception as e:
+                print("Error in saving CSV entry:: ", e) 
+            
+            return response
+        
+    except Exception as e:
+        print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
+        return "Error in callLLM_conclusive_hint:: " + str(e)
+
+
+
+################   
+################ Function call for progress feedback : """Conclusive hint"""    HINT LEVEL : 2 ################
+
+def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_messages=[]):
+    """
+    Function to call the Azure LLM for a conclusive hint.
+    The conclusive hint is a direct answer to the user's question, providing the next best step to take in order to solve the puzzle.
+    Returns at least one cell to correct.
+    """
+    try:
+        if completed:
+            return "The puzzle is already completed. No further steps needed."
+        else:
+            system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
+            user_message = "What is the next step to solve the puzzle?"
+            
+            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
+            print("callLLM_conclusive_hint:: response:: ", response)
+            
+            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+            response = response.split('\n')[0].strip()                          # remove ending whitespace
+            response = remove_after_last_punctuation(response)                  # remove unfinished sentences
+            
+            try:
+                ############ Save CSV entry
+                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
+                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
+            except Exception as e:
+                print("Error in saving CSV entry:: ", e) 
+            
+            return response
+        
+    except Exception as e:
+        print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
+        return "Error in callLLM_conclusive_hint:: " + str(e)
     
+################
+################ Formating the response ################
+
+def filter_crop_llm_response(response):
+    """
+    Function to filter and crop the response from the LLM.
+    """
+    # only accept the sentence until terminator
+    terminator = ["#", "\n", "<|eot_id|>"]
+    response = response.split("\n")[0]
+    if any([term in response for term in terminator]):
+        for term in terminator:
+            if term in response:
+                response = response.split(term)[0]
+                break
+    if (response[-1] == "'"):
+        response = response[:-1]
+    return response
+
+
+def remove_after_last_punctuation(input_string):
+    """
+    Function removes everything after the last punctuation mark in the input string. Hence, removing any unfinished sentences.
+    """
+    # Find the last punctuation mark
+    match = re.search(r'[!?.]', input_string[::-1])  # Reverse the string to find the last punctuation mark
+    if match:
+        last_punctuation_index = len(input_string) - match.start() - 1
+        return input_string[:last_punctuation_index + 1]
+    else:
+        return input_string  # No punctuation found, return the original string
+    
+
+################
+################ Function call for progress feedback : """Directional hint""" OLD VERSION ################   
 def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, past_messages=[]):
     """
     Function to call the Azure LLM for progress feedback with a directional hint.
@@ -165,14 +274,7 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             return response
 
         else:
-            #### Using Azure LLM to generate a response from scratch
-            # wrong_selections_sentences, missing_selections_sentences = generate_mistake_markers(differences)
-            
             _, solutionCellStates = print_format_cellStates(cellStates, solutionCellStates)
-            # system_message = system_prompt(cellStates, solutionCellStates, levelMeaning, height, width, wrong_selections_sentences, missing_selections_sentences)
-            
-
-            # print("system_message:: ", system_message)
             
             #### Using sub component LLMs to generate a response
             start_time = time.time() 
@@ -267,76 +369,3 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
     except Exception as e:
         print("callLLM_progress_checker:: The request failed with status code: " + str(e))
         return "Error in callLLM_progress_checker:: " + str(e)
-
-################   
-################ Function call for progress feedback : """Conclusive hint"""    HINT LEVEL : 2 ################
-
-def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_messages=[]):
-    """
-    Function to call the Azure LLM for a conclusive hint.
-    The conclusive hint is a direct answer to the user's question, providing the next best step to take in order to solve the puzzle.
-    Returns at least one cell to correct.
-    """
-    try:
-        print("Entering callLLM_conclusive_hint:: ")
-        if completed:
-            return "The puzzle is already completed. No further steps needed."
-        else:
-            # system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
-            # print("system_message_conclusive_hint:: ", system_message_conclusive_hint)
-            # response = component_pipeline_query_hf(system_message_conclusive_hint)
-            # print("response:: ", response)
-            
-            #     1      Use the next recommended steps to give a conclusive hint using Azure LLM
-            user_message = "What is the next step to solve the puzzle?"
-            system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
-            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
-            print("callLLM_conclusive_hint:: response:: ", response)
-            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
-            response = response.split('\n')[0].strip()                          # remove ending whitespace
-            response = remove_after_last_punctuation(response)                  # remove unfinished sentences
-            
-            try:
-                ############ Save CSV entry
-                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
-                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
-            except Exception as e:
-                print("Error in saving CSV entry:: ", e) 
-            
-            return response
-        
-    except Exception as e:
-        print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
-        return "Error in callLLM_conclusive_hint:: " + str(e)
-    
-################
-################ Formating the response ################
-
-def filter_crop_llm_response(response):
-    """
-    Function to filter and crop the response from the LLM.
-    """
-    # only accept the sentence until terminator
-    terminator = ["#", "\n", "<|eot_id|>"]
-    response = response.split("\n")[0]
-    if any([term in response for term in terminator]):
-        for term in terminator:
-            if term in response:
-                response = response.split(term)[0]
-                break
-    if (response[-1] == "'"):
-        response = response[:-1]
-    return response
-
-
-def remove_after_last_punctuation(input_string):
-    """
-    Function removes everything after the last punctuation mark in the input string. Hence, removing any unfinished sentences.
-    """
-    # Find the last punctuation mark
-    match = re.search(r'[!?.]', input_string[::-1])  # Reverse the string to find the last punctuation mark
-    if match:
-        last_punctuation_index = len(input_string) - match.start() - 1
-        return input_string[:last_punctuation_index + 1]
-    else:
-        return input_string  # No punctuation found, return the original string
