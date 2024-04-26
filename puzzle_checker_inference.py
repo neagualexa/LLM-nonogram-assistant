@@ -6,9 +6,10 @@ import azure.LLM_calls.azurecredentials as azurecredentials
 
 API_TOKEN = azurecredentials.hf_api_token
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
-API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/MBZUAI/LaMini-Flan-T5-783M"
+# API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/MBZUAI/LaMini-Flan-T5-783M"
+API_URL_TEXTGEN = "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct"
 
-meaning_system_message = "Under Answer section, write 'true' if the user guess is a synonym or describes something similar to the Solution; otherwise, return 'false'. \n"
+meaning_system_message = "Under Answer section, write 'true' if the user guess is a synonym or describes something similar to the Solution; otherwise, return 'false'.  Do not return an explanation.\n"
 
 def meaning_checker_hf(user_message, solution):
     # if user_message.lower() == solution.lower():
@@ -36,7 +37,7 @@ def meaning_checker_hf(user_message, solution):
         print("error:: ", result)
         return "HF error", -1
     # print(result)
-    result = filter_crop_llm_response(result[0]['generated_text'])
+    result = filter_crop_llm_response(result[0]['generated_text'].lower())
     print(result)
     return result, latency
 
