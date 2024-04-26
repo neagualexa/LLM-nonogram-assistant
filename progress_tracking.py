@@ -25,8 +25,8 @@ def recommend_next_steps(no_next_steps, progressGrid, solutionGrid, last_interac
     solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
     solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid, LAST_INTERACTIONS=last_interactions)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
     next_recommended_steps = solver.recommend_next_action(no_next_steps=no_next_steps)
-    next_recommended_steps = zeroToOneIndexed(next_recommended_steps)       # convert to 1-indexed
-    print("next_recommended_steps:: ", next_recommended_steps)
+    next_recommended_steps = zeroToOneIndexed(next_recommended_steps)                           # convert to 1-indexed
+    next_recommended_steps = [(step[0], step[1], ("filled" if step[2] == 1 else "empty"))  for step in next_recommended_steps]   # convert value from int to descriptive string
     
     return next_recommended_steps, solver.process_explained
 

@@ -13,7 +13,10 @@ from system_prompt import (
     system_prompt_positioning, system_prompt_positioning_llama, 
     system_prompt_observe_around, system_prompt_observe_around_llama,
     system_prompt_hint, system_prompt_hint_llama,
-    system_prompt_nonograms
+    system_prompt_nonograms,
+
+    system_prompt_general_hint,
+    system_prompt_conclusive_hint
 )
 from grid_difference_checker import string_to_lists_grids, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
 from puzzle_checker_inference import component_pipeline_query_hf
@@ -31,13 +34,6 @@ observation_model   = "Azure Llama 3 8b Instruct" #"HF Mixtral-8x7B-Instruct-v0.
 position_model      = "Azure Llama 3 8b Instruct" #"HF Mixtral-8x7B-Instruct-v0.1"
 
 system_message = "You are NonoAI, a helpful assistant replying the user's questions regarding Nonogram/Griddler puzzles. Reply in short sentences."
-# system_message = """You are the Nonogram Solver Assistant. You can help the user tackle nonogram and griddler puzzles with ease. Whether the user is a beginner or an experienced puzzle enthusiast, you are ready to assist them in solving these challenging puzzles. 
-#             The user can describe the puzzle or ask for specific tips, and you will guide them through the solving process.
-#             You can also engage in some casual talk, like answering greetings and simple questions like "How/Who are you?". 
-#             At the beginning of a conversation in your first message, introduce yourself. 
-#             Always start with ASSISTANT: when responding to the question.
-#             DO NOT COMPLETE THE SENTENCE!
-#             ONLY answer the user's questions regarding Nonograms. If you do not know how to answer, reply by saying you do not know. Do not reply to any irrelevant questions."""
 
 class LlamaCustomContentFormatter(ContentFormatterBase):
     """Custom Content formatter for LLaMa 2"""
@@ -81,13 +77,14 @@ llm = AzureMLOnlineEndpoint(
     model_kwargs={"temperature": 0.8, "max_tokens": 50, "history": [], "system_message": ""},
 )
 
+################
 ################ Function call for chat message with Azure ################
 
 def callAzureLLM(user_message, system_message=system_message, max_tokens=100, past_messages=[]):
     
     try:
         start_time = time.time() 
-        # llm.model_kwargs["history"] = past_messages
+        llm.model_kwargs["history"] = past_messages
         llm.model_kwargs["system_message"] = system_message
         llm.model_kwargs["max_tokens"] = max_tokens
         response = llm.invoke(input=user_message, stop=["<|eot_id|>"]) # [HumanMessage(content=user_message)], config=metadata
@@ -98,10 +95,6 @@ def callAzureLLM(user_message, system_message=system_message, max_tokens=100, pa
         print(f"Azure LLM Latency: {overall_latency} seconds")
         return response, overall_latency
         # return "test response"
-        
-        # # FREE HF inference (FOR TESTING)
-        # response, _ = component_pipeline_query_hf(system_message +'\nUser:'+ user_message, 50)  # TODO: adapt to implement the memory/systemprompt
-        # return response.split("NonoAI:")[1].split("User:")[0]
     
     except urllib.error.HTTPError as error:
         print("The request failed with status code: " + str(error.code))
@@ -109,11 +102,41 @@ def callAzureLLM(user_message, system_message=system_message, max_tokens=100, pa
         # Print the headers - they include the requert ID and the timestamp, which are useful for debugging the failure
         print(error.info())
         print(error.read().decode("utf8", 'ignore'))
-        
-################ Function call for progress feedback ################
+        return "Error in callAzureLLM:: " + error.read().decode("utf8", 'ignore')
+
+################       
+################ Function call for progress feedback : """General rules hint"""  HINT LEVEL : 0 ################
+
+def callLLM_general_hint(hint_id, past_messages=[]):
+    """
+    Function to call the Azure LLM for a general hint.
+    The general hint is a hint that is not based on the user's progress, but rather a general hint that can be given at any time based on the rules of the puzzle.
+    
+    As the generated hint should not be repeated, the past_messages are used to keep track of the hints that have been given.
+    """
+    # print("callLLM_general_hint:: past_messages:: ", past_messages)
+    
+    try:
+        system_message_general_hint = system_prompt_general_hint()
+        user_message = "I am a beginner and need some help. Can you give me a NEW hint?"
+        response, _ = callAzureLLM(user_message, system_message=system_message_general_hint, max_tokens=70, past_messages=past_messages)
+        print("callLLM_general_hint:: response:: ", response)
+        if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+        response = response.split('\n')[0].strip()                 # remove ending whitespace
+        return response
+    except Exception as e:
+        print("callLLM_general_hint:: The request failed with status code: " + str(e))
+        return "Error in callLLM_general_hint:: " + str(e)
+
+################
+################ Function call for progress feedback : """Directional hint"""    HINT LEVEL : 1 ################
     
 def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, past_messages=[]):
-        
+    """
+    Function to call the Azure LLM for progress feedback with a directional hint.
+    The directional aspect depends on the next few best steps it is predicted for the user to take in order to solve the puzzle.
+    """
+    
     try:
         # cellStates, solutionCellStates, width, height = string_to_lists_grids(cellStates, solutionCellStates) # already in list format
         width = len(cellStates[0])
@@ -123,12 +146,11 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
         missing_selections = differences["missing_selection"]
         
         if completed and (wrong_selections == [] and missing_selections == []):
+            # TODO: give a hint on the puzzle meaning; only congratulate on first request when completed
             system_message_congrats = f"""Congratulate that the level is completed."""
             user_message = "How did I do?"
             
-            # return "test response" # for testing, TODO: to be removed
-            
-            response, _ = callAzureLLM(user_message, system_message=system_message_congrats, max_tokens=10, past_messages=past_messages)
+            response, _ = callAzureLLM(user_message, system_message=system_message_congrats, max_tokens=10, past_messages=[])
             print("response:: ", response)
             
             return response
@@ -234,13 +256,50 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             # system_message = system_message_hint  
 
         # return "test response"
-    except urllib.error.HTTPError as error:
-        print("The request failed with status code: " + str(error.code))
+    except Exception as e:
+        print("callLLM_progress_checker:: The request failed with status code: " + str(e))
+        return "Error in callLLM_progress_checker:: " + str(e)
 
-        print(error.info())
-        print(error.read().decode("utf8", 'ignore'))
+################   
+################ Function call for progress feedback : """Conclusive hint"""    HINT LEVEL : 2 ################
+
+def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_messages=[]):
+    """
+    Function to call the Azure LLM for a conclusive hint.
+    The conclusive hint is a direct answer to the user's question, providing the next best step to take in order to solve the puzzle.
+    Returns at least one cell to correct.
+    """
+    try:
+        print("Entering callLLM_conclusive_hint:: ")
+        if completed:
+            return "The puzzle is already completed. No further steps needed."
+        else:
+            # system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
+            # print("system_message_conclusive_hint:: ", system_message_conclusive_hint)
+            # response = component_pipeline_query_hf(system_message_conclusive_hint)
+            # print("response:: ", response)
+            
+            #     1      Use the next recommended steps to give a conclusive hint using Azure LLM
+            user_message = "What is the next step to solve the puzzle?"
+            system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
+            response, _ = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=30, past_messages=[])
+            print("callLLM_conclusive_hint:: response:: ", response)
+            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+            response = response.split('\n')[0].strip()                          # remove ending whitespace
+            response = remove_after_last_punctuation(response)                  # remove unfinished sentences
+            return response
+        
+    except Exception as e:
+        print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
+        return "Error in callLLM_conclusive_hint:: " + str(e)
+    
+################
+################ Formating the response ################
 
 def filter_crop_llm_response(response):
+    """
+    Function to filter and crop the response from the LLM.
+    """
     # only accept the sentence until terminator
     terminator = ["#", "\n", "<|eot_id|>"]
     response = response.split("\n")[0]
@@ -255,6 +314,9 @@ def filter_crop_llm_response(response):
 
 
 def remove_after_last_punctuation(input_string):
+    """
+    Function removes everything after the last punctuation mark in the input string. Hence, removing any unfinished sentences.
+    """
     # Find the last punctuation mark
     match = re.search(r'[!?.]', input_string[::-1])  # Reverse the string to find the last punctuation mark
     if match:

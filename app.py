@@ -7,7 +7,12 @@ import ast
 # from old.huggingface_inference import query as callLLM  # hugging face llms
 # from old.llm_local import callLLM                       # local gguf file llm
 # from old.azure_inference_http import callLLM            # azure llm but pure http requests
-from azure_inference_chat import callAzureLLM, callLLM_progress_checker                # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
+from azure_inference_chat import (          
+    callAzureLLM,                   # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
+    callLLM_progress_checker,
+    callLLM_general_hint,
+    callLLM_conclusive_hint
+)                
 # from old.azure_inference import callLLM_progress_checker                            # azure llm non chat
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
@@ -43,14 +48,8 @@ conn.close()
 
 @app.route('/')
 def index():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC')
-    messages = cursor.fetchall()
-    conn.close()
-    # format the messages into json for user and ai and timestamp
-    messages = [{'user_message': message[1], 'ai_message': message[2], "timestamp": message[3]} for message in messages]
     global messages_cache
+    messages = fetch_messages_cached()
     messages_cache = format_history(messages)
     return render_template('index.html', messages=messages, chatbot_name=chatbot_name)
 
@@ -71,21 +70,8 @@ def send_message():
     ############################################## 
 
     if response:
-        # Add user message to the database
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO messages (user_message, ai_message) VALUES (?, ?)',
-                    (user_message, response))
-        conn.commit()
-        
-        # Fetch the new message
-        cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC LIMIT 1')
-        new_message = cursor.fetchone()
-        conn.close()
-        new_message = {'user_message': new_message[1], 'ai_message': new_message[2], "timestamp": new_message[3]}
-        
-        # Update the messages cache
-        messages_cache.insert(0, (m for m in format_message(new_message)))
+        # Add conversation to the database
+        insert_new_message_cache(user_message, response)
 
     redirect('/')
     
@@ -96,7 +82,6 @@ def check_puzzle_meaning():
     # Get puzzleMeaning from the form
     puzzle_meaning = request.form.get('puzzleMeaning')
     # Load puzzle meaning from string to json
-    # print("puzzle_meaning:: ", puzzle_meaning)
     puzzle_meaning = json.loads(puzzle_meaning)
     user_guess = puzzle_meaning['user_guess']
     solution = puzzle_meaning['solution']
@@ -117,7 +102,6 @@ def check_puzzle_progress():
     # Get puzzleMeaning from the form
     puzzle_progress = request.form.get('puzzleProgress')
     # Load puzzle meaning from string to json
-    # print("puzzle_progress:: ", puzzle_progress)
     puzzle_progress = json.loads(puzzle_progress)
     cellStates = puzzle_progress['cellStates']
     solutionCellStates = puzzle_progress['solutionCellStates']
@@ -141,6 +125,7 @@ def check_puzzle_progress():
     define_hint_level(username, level)
     # print("user_level_progress:: ", user_level_progress, progress)
     hint_level = user_level_progress[username]["hint_level"]
+    # hint_level = 2 # for testing
     
     if hint_level > 0:
         ##### Fetch the last interactions
@@ -152,17 +137,20 @@ def check_puzzle_progress():
         # predict next best steps
         row_clues, column_clues = count_consecutive_cells(solutionCellStates)
         last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
-        next_recommended_steps = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+        next_recommended_steps, _ = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
     ############################################## call LLM for response depending on the hint level
+    messages_cache = format_history(fetch_last_5_messages_cached())
+    response_llm = ""
     if hint_level == 0:
-        response_llm = "General rules hint"
-        # TODO: call LLM for general rules hint
+        """General rules hint"""
+        response_llm = callLLM_general_hint(hint_id, messages_cache)
     elif hint_level == 1:
         """Directional hint"""
         response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, messages_cache)
     elif hint_level == 2:
-        response_llm = "Conclusive hint"
+        "Conclusive hint"
+        response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)
         # TODO: call LLM for conclusive hint
     #####
     # try:
@@ -174,24 +162,12 @@ def check_puzzle_progress():
     #     print("error in /check_puzzle_progress connecting to /verbal_hint:: ", e)
     ############################################## 
 
-    if response_llm:
-        # Add user message to the database
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO messages (user_message, ai_message) VALUES (?, ?)',
-                    ("Progress feedback:", response_llm))
-        conn.commit()
+    if response_llm != "":
+        # Save conversation to the database
+        message = f"Progress feedback HINT LEVEL {hint_level}"
+        insert_new_message_cache(message, response_llm)
         
-        # Fetch the new message
-        cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC LIMIT 1')
-        new_message = cursor.fetchone()
-        conn.close()
-        new_message = {'user_message': new_message[1], 'ai_message': new_message[2], "timestamp": new_message[3]}
-        
-        # Update the messages cache
-        messages_cache.insert(0, (m for m in format_message(new_message)))
-
-    redirect('/')
+    # redirect('/')
     return response_llm
 
 @app.route('/verbalise_hint', methods=['POST'])
@@ -271,6 +247,49 @@ def record_interactions():
     
     return "Saved interaction data successfully!"
 
+def fetch_messages_cached():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC')
+    messages = cursor.fetchall()
+    conn.close()
+    messages = [{'user_message': message[1], 'ai_message': message[2], "timestamp": message[3]} for message in messages]
+    return messages
+
+def fetch_last_message_cached():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC LIMIT 1')
+    last_message = cursor.fetchone()
+    conn.close()
+    last_message = {'user_message': last_message[1], 'ai_message': last_message[2], "timestamp": last_message[3]}
+    return last_message
+
+def fetch_last_5_messages_cached():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC LIMIT 5')
+    messages = cursor.fetchall()
+    conn.close()
+    messages = [{'user_message': message[1], 'ai_message': message[2], "timestamp": message[3]} for message in messages]
+    return messages
+
+def insert_new_message_cache(user_message, response_llm):
+    # Add user message to the database
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO messages (user_message, ai_message) VALUES (?, ?)',
+                (user_message, response_llm))
+    conn.commit()
+    
+    # Fetch the new message
+    cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC LIMIT 1')
+    new_message = cursor.fetchone()
+    conn.close()
+    new_message = {'user_message': new_message[1], 'ai_message': new_message[2], "timestamp": new_message[3]}
+    
+    # Update the messages cache
+    messages_cache.insert(0, (m for m in format_message(new_message)))
 
 def format_message(message):
     formatted_message = [

@@ -22,7 +22,33 @@ def system_prompt_hint_llama(position_description_rephrased, observation, next_s
 def system_prompt_nonograms():
     return sys_nonograms
 
-######### System Prompts #########
+def system_prompt_general_hint():
+    return sys_general_hint
+
+def system_prompt_conclusive_hint(next_steps):
+    return sys_conclusive_hint.format(next_steps=next_steps)
+
+######### System Prompts GENERAL     HINT LEVEL 0 #########
+sys_general_hint = """You are a master solver of nonogram puzzles. You know every best strategy and rule to solve a nonogram puzzle. 
+In nonograms, the numbers shown on the left and above the crossword - describe the groups of painted squares (which go in sequence, no blanks) horizontally and vertically accordingly. The order of these numbers describes the order of location of these groups, but it is unknown where each group starts and finishes (in fact it is the task of the puzzle to define their location). Each separate number means a separate group of the given size (i.e. number 5 - means a group of five painted squares in sequence, 1 - a group of only one painted square). The groups are separated by at least one empty square.
+The main requirement to Nonograms is that the crossword should have only one logical solution, achieved without any “guessing” (method of trial and error).
+
+Provide a hint that would help a new player understand the rules of the puzzles. 
+
+Start your hint with 'Hint: ' and keep it short and simple. 
+
+Do not give the same hint twice.
+
+Here are some rules for a new player to consider:
+- The rows or columns that have the highest number as their clues are the best to start with.
+- Complete the cells that have a definite location first.
+- The rows or columns that have the sum of the clues the largest are the easiest to solve.
+- Always remember there is at least one empty square between the groups of filled cells.
+- When deciding on the rows or columns to start with, sum up the clues and at least one empty square between the group.
+- Always look at both the column and row clue.
+"""
+
+######### System Prompts DIRECTIONAL HINT LEVEL 1 #########
 # receives simple descriptions of the location of a point in a grid and rephrases them
 sys_positioning = """Your task is to rephrase the description of the location of a cell in a {height}x{width} grid. 
 Focus on providing a similar description using different words or phrases and formulate a sentence. Use concise and clear language. 
@@ -97,6 +123,22 @@ Only complete the Hint section.
 Location area of mistake: '{position_description_rephrased}'
 Observation: '{observation}'
 Hint: '"""
+
+######### System Prompts CONCLUSIVE   HINT LEVEL 2 #########
+sys_conclusive_hint = """Your goal is to guide the player towards the correct solution by providing a hint.
+
+Choose one or more square locations from the list below. The format of list is [(row, column, value)], where value is either 'filled' or 'empty'.Hence, the player change the square at (row, column) to progress towards the solution.
+
+Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.
+
+Next Steps: {next_steps}
+
+Here are some examples of hints:
+- You have a mistake on row i column j, try reconsidering the value at this square depending on the clues.
+- How about filling the square (row,column). Would that help you progress?
+- Squares on row i such as (row_i,column) and (row_i,column) have definite positions.
+- Consider backtracking in your tracks, maybe crosscheck you solution at location (row,column).
+"""
 
 ###########################
 # sys_positioning only provides the overall positioning of a location in a grid
