@@ -19,7 +19,16 @@ from system_prompt import (
     system_prompt_directional_hint,
     system_prompt_conclusive_hint
 )
-from grid_difference_checker import string_to_lists_grids, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
+from grid_difference_checker import (
+    string_to_lists_grids, 
+    compare_grids, 
+    generate_mistake_markers, 
+    print_format_cellStates, 
+    random_element, 
+    describe_point_position, 
+    count_consecutive_cells, 
+    decide_overall_area
+)
 from puzzle_checker_inference import component_pipeline_query_hf
 from data_collection import csv_handler_progress
 '''
@@ -150,12 +159,24 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMea
     Returns directional instructions to the user based on the next recommended steps (e.g. position in the grid, row number).
     """
     try:
+        print("Entering callLLM_directional_hint:: next_recommended_steps:: ", next_recommended_steps)
         if completed:
             return "The puzzle is already completed. No further steps needed."
         else:
-            system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps)
-            user_message = "Guide me to the next step in the puzzle."
+            height = len(cellStates)
+            width = len(cellStates[0])
             
+            # 1. Get a natural language description of the locayions of the next recommended steps
+            locations_next_steps = [describe_point_position((step[0], step[1]), width, height) for step in next_recommended_steps]
+            print("locations_next_steps:: ", locations_next_steps)
+            # 2. Use the locations for each step and decide on overall area to focus on
+            overall_area = decide_overall_area(locations_next_steps)
+            print("overall_area:: ", overall_area)
+            # 3. Generate a hint based on the area to focus on
+            system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area)
+            user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle."
+            
+            # return "test"
             response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
             print("callLLM_conclusive_hint:: response:: ", response)
             

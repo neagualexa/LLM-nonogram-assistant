@@ -11,6 +11,7 @@ from azure_inference_chat import (
     callAzureLLM,                   # azure llm with langchain and embedded message history (preferred as memory preserved in DB)
     callLLM_progress_checker,
     callLLM_general_hint,
+    callLLM_directional_hint,
     callLLM_conclusive_hint
 )                
 # from old.azure_inference import callLLM_progress_checker                            # azure llm non chat
@@ -119,7 +120,7 @@ def check_puzzle_progress():
     define_hint_level(username, level)
     # print("user_level_progress:: ", user_level_progress, progress)
     hint_level = user_level_progress[username]["hint_level"]
-    # hint_level = 2 # for testing
+    # hint_level = 1 # for testing
     
     if hint_level > 0:
         ##### Fetch the last interactions
@@ -151,7 +152,7 @@ def check_puzzle_progress():
         response_llm = callLLM_general_hint(hint_id, messages_cache)
     elif hint_level == 1:
         """Directional hint"""
-        response_llm = callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, messages_cache)
+        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, messages_cache)
     elif hint_level == 2:
         "Conclusive hint"
         response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)

@@ -26,8 +26,8 @@ def system_prompt_nonograms():
 def system_prompt_general_hint():
     return sys_general_hint
 
-def system_prompt_directional_hint(position_description, next_steps, height, width):
-    return sys_directional_hint.format(position_description=position_description, next_steps=next_steps, height=height, width=width)
+def system_prompt_directional_hint(next_steps, height, width, overall_area):
+    return sys_directional_hint.format(next_steps=next_steps, height=height, width=width, overall_area=overall_area)
 
 def system_prompt_conclusive_hint(next_steps):
     return sys_conclusive_hint.format(next_steps=next_steps)
@@ -57,11 +57,14 @@ Here are some rules for a new player to consider:
 ######### System Prompts DIRECTIONAL HINT LEVEL 1 #########
 sys_directional_hint = """You are a master solver of nonogram puzzles. You know every best strategy and rule to solve a nonogram puzzle.
 
-...
+Consider all square locations from the list below. The format of list is [(row, column, value)], where value is either 'filled' or 'empty'. Hence, the player should change the square at (row, column) to progress towards the solution.
+
+Without giving the exact square locations, use the overall area description in the {height}x{width} grid. Use terms like 'top', 'bottom', 'left', 'right', 'middle', 'corner', 'edge', 'row', 'column', etc. to guide the player effectively.
 
 Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.
 
 Next Steps: {next_steps}
+Overall Area: {overall_area}
 
 Here are some examples of hints:
 - There are a couple of definite cells on row X
@@ -71,6 +74,29 @@ Here are some examples of hints:
 - Consider backtracking in your tracks, maybe crosscheck you solution
 """
 
+######### System Prompts CONCLUSIVE   HINT LEVEL 2 #########
+sys_conclusive_hint = """Your goal is to guide the player towards the correct solution by providing a hint.
+
+Choose one or more square locations from the list below. The format of list is [(row, column, value)], where value is either 'filled' or 'empty'.Hence, the player must change the square at (row, column) to progress towards the solution.
+
+Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.
+
+Next Steps: {next_steps}
+
+Here are some examples of hints:
+- You have a mistake on row i column j, try reconsidering the value at this square depending on the clues.
+- How about filling the square (row,column). Would that help you progress?
+- Squares on row i such as (row_i,column) and (row_i,column) have definite positions.
+- Consider backtracking in your tracks, maybe crosscheck you solution at location (row,column).
+"""
+
+
+
+###########################
+###########################
+########################### OLD Directional Hints
+###########################
+###########################
 # receives simple descriptions of the location of a point in a grid and rephrases them
 sys_positioning = """Your task is to rephrase the description of the location of a cell in a {height}x{width} grid. 
 Focus on providing a similar description using different words or phrases and formulate a sentence. Use concise and clear language. 
@@ -146,21 +172,7 @@ Location area of mistake: '{position_description_rephrased}'
 Observation: '{observation}'
 Hint: '"""
 
-######### System Prompts CONCLUSIVE   HINT LEVEL 2 #########
-sys_conclusive_hint = """Your goal is to guide the player towards the correct solution by providing a hint.
 
-Choose one or more square locations from the list below. The format of list is [(row, column, value)], where value is either 'filled' or 'empty'.Hence, the player change the square at (row, column) to progress towards the solution.
-
-Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.
-
-Next Steps: {next_steps}
-
-Here are some examples of hints:
-- You have a mistake on row i column j, try reconsidering the value at this square depending on the clues.
-- How about filling the square (row,column). Would that help you progress?
-- Squares on row i such as (row_i,column) and (row_i,column) have definite positions.
-- Consider backtracking in your tracks, maybe crosscheck you solution at location (row,column).
-"""
 
 ###########################
 # sys_positioning only provides the overall positioning of a location in a grid

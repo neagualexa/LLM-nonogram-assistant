@@ -166,11 +166,71 @@ def describe_point_position(position, width, height):
     # Rows and columns
     if row == half_height:
         description.append("middle row")
-    elif col == half_width:
+    if col == half_width:
         description.append("middle column")
 
     # Random choice from the collected descriptions
     return random.choice(description)
+
+def decide_overall_area(locations_next_steps):
+    """
+    Method to decide the overall area described by the locations of the next steps.
+    Take each location and decide the area it describes, then combine them into an overall area and prioritise the majority.
+    """
+    overall_area = {
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "middle": 0,
+        "edge": 0,
+        "corner": 0,
+        "quadrant": 0,
+        "row": 0,
+        "column": 0
+    }
+    
+    for location in locations_next_steps:
+        # check for keywords in the location
+        if "top" in location:
+            overall_area["top"] += 1
+        if "bottom" in location:
+            overall_area["bottom"] += 1
+        if "left" in location:
+            overall_area["left"] += 1
+        if "right" in location:
+            overall_area["right"] += 1
+        if "middle" in location:
+            overall_area["middle"] += 1
+        if "edge" in location:
+            overall_area["edge"] += 1
+        if "corner" in location:
+            overall_area["corner"] += 1
+        if "quadrant" in location:
+            overall_area["quadrant"] += 1
+        if "row" in location:
+            overall_area["row"] += 1
+        if "column" in location:
+            overall_area["column"] += 1
+            
+    # Find the top two elements by their counts
+    sorted_areas = sorted(overall_area.items(), key=lambda x: x[1], reverse=True)
+    # get non-zero elements
+    areas = [area for area, count in sorted_areas if count > 0]
+    
+    majority_area = ""
+    for area in areas:
+        if area in ("left", "right"):
+            majority_area += area
+        elif area in ("top", "bottom", "middle"):
+            majority_area = area + " " + majority_area
+        elif area in ("edge", "corner", "quadrant", "row", "column"):            # add onto until ending words are found
+            majority_area += " " + area
+            break
+            
+    print(areas, majority_area)
+    
+    return majority_area
 
 def describe_point_position_bottom_left(position, width, height):
     """
