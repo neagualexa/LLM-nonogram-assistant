@@ -118,7 +118,7 @@ class NonogramSolver:
             self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
 
             # step 5.1.2: Get the priority rows and columns based on the last interactions with the grid (also consider the rows and columns right next to the last interacted row or column)
-            self.priority_lines = self.get_priority_lines(self.last_interactions)
+            self.priority_lines = self.get_priority_lines(self.last_interactions)       # priority used to sort the rows and columns in custom_sort_priority
             self.process_explained.append("- user interacted last with: " + str(self.last_interactions) + "\n")
             # Step 5.1.3: Then re-sort the combined list (of rows and columns) by priority of interaction
             self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
@@ -145,7 +145,7 @@ class NonogramSolver:
                             if not (self.board[ri][ci] == 0 and val == -1 and self.progress_grid[ri][ci] == -1):
                                 # Ignore the cells that should be empty, do not recommend the user to keep a cell empty
                                 self.process_explained.append(f">--- \tCell on row: {ri}, col: {ci} is a null cell with one possible value accross all combinations of the {'row' if row_ind else 'column'}, so update the cell with the value {val} ({'filled' if val == 1 else 'empty' }). Recommend the user to change the cell state!!!!!")
-                                print(f'Recommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]')
+                                # print(f'Recommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]')
                                 if no_next_steps > 0:
                                     next_recommended_steps.append((ri, ci, val))
                                     no_next_steps -= 1
@@ -265,12 +265,24 @@ class NonogramSolver:
         
         Priority means that the solver will first try to solve the rows and columns that were last interacted with.
         Also introduce the rows and columns that are right next to the last interacted row or column.
+        
+        Also, check for overall direction of the user's movement, is it mainly horizontal or vertical?
         """
         priority_lines = {
+            "main direction": (), # (row or column index, row index boolean) 
             "rows": [],
             "cols": []
         }
         
+        # Check for the main direction of the user's movement (difference between the last two interactions)
+        length_non_None = len([i for i in last_interactions if i != None])  # length of the last interactions if they are not None
+        if length_non_None > 1:
+            row_diff = last_interactions[0][0] - last_interactions[1][0]
+            col_diff = last_interactions[0][1] - last_interactions[1][1]
+            if row_diff == 0: priority_lines["main direction"] = (last_interactions[0][0], 1)
+            elif col_diff == 0: priority_lines["main direction"] = (last_interactions[0][1], 0)
+            
+        # Add the interacted row or column and their neighbours to the priority list
         for interaction in last_interactions:
             if interaction == None: continue
             if not interaction[0] in priority_lines["rows"]:
@@ -291,14 +303,16 @@ class NonogramSolver:
         (i, n, row_ind): tuple of integers (index, number of possibilities, row or column index boolean)
         """
         i, n, row_ind = item
-        priority = 1  # Default priority (1 means not in the top list)
+        priority = 2            # Default priority (2 means not in the top list)
         
-        # Assign priority if it's in the priority list; 0 means it is in the top list (no priority between the top list elements)
-        if row_ind and i in self.priority_lines["rows"]:
+        # Assign priority if it's in the priority list; 0 means first priority; 1 means it is in the top list (no priority between other top list elements)
+        if (i, row_ind) == self.priority_lines["main direction"]:
             priority = 0
-        elif not row_ind and i in self.priority_lines["cols"]:
-            priority = 0
-        
+        elif (row_ind) and i in self.priority_lines["rows"]:
+            priority = 1
+        elif (not row_ind) and i in self.priority_lines["cols"]:
+            priority = 1
+            
         return (priority, n)
 
     def get_only_one_option(self, values):
