@@ -209,6 +209,7 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
     Returns at least one cell to correct.
     """
     try:
+        print("Entering callLLM_conclusive_hint:: next_recommended_steps:: ", next_recommended_steps)
         if completed:
             return "The puzzle is already completed. No further steps needed."
         else:

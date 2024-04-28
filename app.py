@@ -21,7 +21,7 @@ from data_collection import csv_handler_progress, csv_handler_meaning, csv_handl
 from grid_difference_checker import count_consecutive_cells
 from progress_tracking import (
     recommend_next_steps,
-    calculate_progress, track_user_level_progress, define_hint_level,
+    track_hint_level,
     user_level_progress
 )
 
@@ -114,13 +114,11 @@ def check_puzzle_progress():
     level = puzzle_progress['level']
     hint_id = puzzle_progress['hint_id']
 
-    # calculate progress of user and update the hint level accordingly
-    progress = calculate_progress(progressGrid=cellStates, solutionGrid=solutionCellStates)
-    track_user_level_progress(username, level, progress)
-    define_hint_level(username, level)
-    # print("user_level_progress:: ", user_level_progress, progress)
+    ##### Track the hint level per user per level
+    track_hint_level(username=username, level=level, progressGrid=cellStates, solutionGrid=solutionCellStates)
+    print("user_level_progress:: ", user_level_progress)
     hint_level = user_level_progress[username]["hint_level"]
-    # hint_level = 1 # for testing
+    # hint_level = 2 # for testing
     
     if hint_level > 0:
         ##### Fetch the last interactions
