@@ -1,7 +1,8 @@
 # Final Year Project - user- & task-tailored AI assistant
 
-This repository contains the resourses to set up the AI assistant that helps the user during their progress on completing Nonograms.
+This repository contains the resourses to set up the AI assistant that helps the user during their progress on completing Nonogram puzzles.
 This is a Flask application that serves as a chatroom with AI-featured puzzle checking and hinting functionalities.
+Under `speech_pipeline`, a Text-to-Speech server can be run to allow for the AI to verbalise its hints and help.
 
 This is one of the repos for the Final Year Project of [Alexandra Neagu (@neagualexa)](https://github.com/neagualexa) titled `XXX` at Imperial College London.
 
@@ -16,6 +17,7 @@ The application has the following routes:
 - `/check_puzzle_meaning`: This route is used to check the meaning of a puzzle.
 - `/check_puzzle_progress`: This route is used to check the progress of a puzzle and allow an LLM to generate a progress-tailored hint to help the user.
 - `/clear_history`: This route is used to clear the chat history.
+- `/verbalise_hint`: This route forwards the text based hint to the Text-to-Speech server to vocalise it.
 
 ## Setup
 

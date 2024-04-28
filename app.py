@@ -136,7 +136,7 @@ def check_puzzle_progress():
             # predict next best steps
             row_clues, column_clues = count_consecutive_cells(solutionCellStates)
             last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
-            next_recommended_steps, _ = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+            next_recommended_steps, _ = recommend_next_steps(no_next_steps=5, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
     ##### Save the data to the CSV Progress database
     if not completed:
