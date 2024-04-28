@@ -233,15 +233,16 @@ def record_interactions():
     next_recommended_steps, process_explained = recommend_next_steps(no_next_steps=5, progressGrid=progressGrid, solutionGrid=solutionGrid, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
         
     ##### Update ``Ground truth`` target cell on previous entry
-    csv_handler_interaction.update_entry(len(csv_handler_interaction.read_entries())-2, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
+    length_csv_interaction = csv_handler_interaction.get_length()
+    csv_handler_interaction.update_entry(length_csv_interaction-2, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
     
     ##### Save the data to the CSV Interaction database
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
-    new_entry = {'id': len(csv_handler_interaction.read_entries()), 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y'}    
+    new_entry = {'id': length_csv_interaction, 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y'}    
     csv_handler_interaction.add_entry(new_entry)
     
     #### Update ``Predicted`` target cell on previous entry
-    csv_handler_interaction.update_entry(len(csv_handler_interaction.read_entries())-1, {'Predicted_row': lastPressedCell_1[0], 'Predicted_col': lastPressedCell_1[1]})
+    csv_handler_interaction.update_entry(length_csv_interaction-1, {'Predicted_row': lastPressedCell_1[0], 'Predicted_col': lastPressedCell_1[1]})
     
     ##### Save process_explained into empty file
     with open('data/nonogram_solver/process_explained.txt', 'w') as f:
