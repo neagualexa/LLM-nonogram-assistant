@@ -2,6 +2,7 @@ from nonogram_solver import NonogramSolver
 from grid_difference_checker import zeroToOneIndexed
 
 user_level_progress = {}
+interaction_counter = 0
 
 def track_hint_level(username, level, progressGrid, solutionGrid):
     """
@@ -89,3 +90,17 @@ def recommend_next_steps(no_next_steps, progressGrid, solutionGrid, last_interac
     next_recommended_steps = [(step[0], step[1], ("filled" if step[2] == 1 else "empty"))  for step in next_recommended_steps]   # convert value from int to descriptive string
     
     return next_recommended_steps, solver.process_explained
+
+def get_interaction_id():
+    """
+    Get the unique identifier for the interaction.
+    """
+    global interaction_counter
+    return interaction_counter
+
+def increment_interaction_counter():
+    """
+    Increment the interaction counter.
+    """
+    global interaction_counter
+    interaction_counter += 1

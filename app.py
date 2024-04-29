@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import sqlite3
 from datetime import datetime
 import requests
@@ -22,10 +24,18 @@ from grid_difference_checker import count_consecutive_cells
 from progress_tracking import (
     recommend_next_steps,
     track_hint_level,
-    user_level_progress
+    user_level_progress,
+    get_interaction_id, increment_interaction_counter
 )
 
 app = Flask(__name__)
+
+# Create a limiter with the default rate limit (e.g., 1 request per 0.2 seconds)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["7/second"]
+)
 
 # Chatbot name
 chatbot_name = "NonoAI"
@@ -41,7 +51,8 @@ cursor.execute('''
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_message TEXT NOT NULL,
         ai_message TEXT NOT NULL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        hint_level INTEGER DEFAULT 0
     )
 ''')
 conn.commit()
@@ -139,11 +150,12 @@ def check_puzzle_progress():
     ##### Save the data to the CSV Progress database
     if not completed:
         # count_entries = len(csv_handler_progress.read_entries())
-        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': '', 'Hint_Response': '', 'Observation_Response': '', 'Positioning_Response': '', 'Position_Description': '', 'Overall_Latency': '', 'Hint_Latency': '', 'Observation_Latency': '', 'Position_Latency': '', 'Hint_Model': '', 'Observation_Model': '', 'Position_Model': '', 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': "-", 'Hint_Response': "-", 'Observation_Response': "-", 'Positioning_Response': "-", 'Position_Description': "-", 'Overall_Latency': "-", 'Hint_Latency': "-", 'Observation_Latency': "-", 'Position_Latency': "-", 'Hint_Model': "-", 'Observation_Model': "-", 'Position_Model': "-", 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
         
     ############################################## call LLM for response depending on the hint level
-    messages_cache = format_history(fetch_last_5_messages_cached())
+    messages_cache = format_history(fetch_last_5_messages_cached(hint_level))
+    print("messages_cache:: ", messages_cache)
     response_llm = ""
     if hint_level == 0:
         """General rules hint"""
@@ -167,7 +179,7 @@ def check_puzzle_progress():
     if response_llm != "":
         # Save conversation to the database
         message = f"Progress feedback HINT LEVEL {hint_level}"
-        insert_new_message_cache(message, response_llm)
+        insert_new_message_cache(message, response_llm, hint_level)
         
     # redirect('/')
     return response_llm
@@ -214,6 +226,7 @@ def save_game():
     return "Game data saved successfully!"
 
 @app.route('/record_interaction', methods=['POST'])
+@limiter.limit("1 per 0.2 seconds")
 def record_interactions():
     interactions = request.form.get('GridInteractions')
     interactions = json.loads(interactions)
@@ -231,18 +244,20 @@ def record_interactions():
     row_clues, column_clues = count_consecutive_cells(solutionGrid)
     last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
     next_recommended_steps, process_explained = recommend_next_steps(no_next_steps=5, progressGrid=progressGrid, solutionGrid=solutionGrid, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
-        
+    
+    interaction_counter = get_interaction_id()
     ##### Update ``Ground truth`` target cell on previous entry
-    length_csv_interaction = csv_handler_interaction.get_length()
-    csv_handler_interaction.update_entry(length_csv_interaction-2, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
+    if interaction_counter > 1:
+        try:
+            csv_handler_interaction.update_entry(interaction_counter-1, {'Target_row': lastPressedCell_1[0], 'Target_col': lastPressedCell_1[1]})
+        except Exception as e:
+            print("Error updating the target cell on the previous entry:: ", e)
     
     ##### Save the data to the CSV Interaction database
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
-    new_entry = {'id': length_csv_interaction, 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y'}    
+    new_entry = {'id': interaction_counter, 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y', 'Predicted_row': next_recommended_steps[0], 'Predicted_col': next_recommended_steps[1]}    
     csv_handler_interaction.add_entry(new_entry)
-    
-    #### Update ``Predicted`` target cell on previous entry
-    csv_handler_interaction.update_entry(length_csv_interaction-1, {'Predicted_row': lastPressedCell_1[0], 'Predicted_col': lastPressedCell_1[1]})
+    increment_interaction_counter()
     
     ##### Save process_explained into empty file
     with open('data/nonogram_solver/process_explained.txt', 'w') as f:
@@ -272,21 +287,24 @@ def fetch_last_message_cached():
     last_message = {'user_message': last_message[1], 'ai_message': last_message[2], "timestamp": last_message[3]}
     return last_message
 
-def fetch_last_5_messages_cached():
+def fetch_last_5_messages_cached(hint_level):
+    """
+    Fetch the last 5 messages from the database that have the same hint level
+    """
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC LIMIT 5')
+    cursor.execute('SELECT * FROM messages WHERE hint_level = ? ORDER BY timestamp DESC LIMIT 5', (hint_level,))
     messages = cursor.fetchall()
     conn.close()
     messages = [{'user_message': message[1], 'ai_message': message[2], "timestamp": message[3]} for message in messages]
     return messages
 
-def insert_new_message_cache(user_message, response_llm):
+def insert_new_message_cache(user_message, response_llm, hint_level):
     # Add user message to the database
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO messages (user_message, ai_message) VALUES (?, ?)',
-                (user_message, response_llm))
+    cursor.execute('INSERT INTO messages (user_message, ai_message, hint_level) VALUES (?, ?, ?)',
+                (user_message, response_llm, hint_level))
     conn.commit()
     
     # Fetch the new message
