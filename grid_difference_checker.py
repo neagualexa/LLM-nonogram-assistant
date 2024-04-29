@@ -153,21 +153,25 @@ def describe_point_position(position, width, height):
     # Quadrants
     half_width = width // 2
     half_height = height // 2
+    even_rows = height % 2 == 0
+    even_cols = width % 2 == 0
+    index_offset_row = 0 if even_rows else 1
+    index_offset_col = 0 if even_cols else 1
 
-    if col <= half_width and row <= half_height:
+    if col < half_width and row < half_height:
         description.append("top-left quadrant")
-    elif col > half_width and row <= half_height:
+    elif col > half_width+index_offset_col and row < half_height:
         description.append("top-right quadrant")
-    elif col <= half_width and row > half_height:
+    elif col < half_width and row > half_height+index_offset_row:
         description.append("bottom-left quadrant")
-    elif col > half_width and row > half_height:
+    elif col > half_width+index_offset_col and row > half_height+index_offset_row:
         description.append("bottom-right quadrant")
 
     # Rows and columns
-    if row == half_height:
-        description.append("middle row")
-    if col == half_width:
-        description.append("middle column")
+    if row == half_height or row == half_height+index_offset_row:
+        description.append("middle rows")
+    if col == half_width or col == half_width+index_offset_col:
+        description.append("middle columns")
 
     # Random choice from the collected descriptions
     return random.choice(description)
@@ -186,8 +190,8 @@ def decide_overall_area(locations_next_steps):
         "edge": 0,
         "corner": 0,
         "quadrant": 0,
-        "row": 0,
-        "column": 0
+        "rows": 0,
+        "columns": 0
     }
     
     for location in locations_next_steps:
@@ -209,9 +213,9 @@ def decide_overall_area(locations_next_steps):
         if "quadrant" in location:
             overall_area["quadrant"] += 1
         if "row" in location:
-            overall_area["row"] += 1
+            overall_area["rows"] += 1
         if "column" in location:
-            overall_area["column"] += 1
+            overall_area["columns"] += 1
             
     # Find the top two elements by their counts
     sorted_areas = sorted(overall_area.items(), key=lambda x: x[1], reverse=True)
@@ -219,16 +223,25 @@ def decide_overall_area(locations_next_steps):
     areas = [area for area, count in sorted_areas if count > 0]
     
     majority_area = ""
+    area_components = (("",0),("",0),("",0))                      # (horizontal, vertical, locational) terms
+    if areas[0] in("edge", "corner", "quadrant", "rows", "columns"):
+        area_components = (area_components[0], area_components[1], (areas[0],1))
+        areas.pop(0)
     for area in areas:
-        if area in ("left", "right"):
-            majority_area += area
-        elif area in ("top", "bottom", "middle"):
-            majority_area = area + " " + majority_area
-        elif area in ("edge", "corner", "quadrant", "row", "column"):            # add onto until ending words are found
-            majority_area += " " + area
-            break
-            
-    print(areas, majority_area)
+        if area in ("top", "bottom", "middle")                       and area_components[0][1] == 0:
+            area_components = ((area,1), area_components[1], area_components[2])
+        elif area in ("left", "right")                               and area_components[1][1] == 0:
+            area_components = (area_components[0], (area,1), area_components[2])
+        elif area in ("edge", "corner", "quadrant", "rows", "columns") and area_components[2][1] == 0:            # add onto until ending words are found
+            area_components = (area_components[0], area_components[1], (area,1))
+        
+        # if area_components[2][1]:
+        #     print("breaking")
+        #     break
+    
+    majority_area = " ".join([component[0] for component in area_components])
+    
+    print(areas, area_components, majority_area)
     
     return majority_area
 

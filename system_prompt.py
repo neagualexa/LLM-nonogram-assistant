@@ -26,8 +26,8 @@ def system_prompt_nonograms():
 def system_prompt_general_hint():
     return sys_general_hint
 
-def system_prompt_directional_hint(next_steps, height, width, overall_area):
-    return sys_directional_hint.format(next_steps=next_steps, height=height, width=width, overall_area=overall_area)
+def system_prompt_directional_hint(next_steps, height, width, overall_area, last_location):
+    return sys_directional_hint.format(next_steps=next_steps, height=height, width=width, overall_area=overall_area, last_location=last_location)
 
 def system_prompt_conclusive_hint(next_steps):
     return sys_conclusive_hint.format(next_steps=next_steps)
@@ -66,15 +66,19 @@ Without giving the exact square locations, use the overall area description in t
 
 Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.
 
+Do not give the same hint twice.
+
 Next Steps: {next_steps}
 Overall Area: {overall_area}
+Player location: {last_location}
 
-Here are some examples of hints:
-- There are a couple of definite cells on row X
-- Try considering both rows and columns, do not get stuck on one
-- Maybe there are still some rows that sum to {height}
-- Take a look in area X of the grid
-- Consider backtracking in your tracks, maybe crosscheck you solution
+Here are some examples of hints you can provide:
+- There are a couple of definite cells on row X.
+- Consider the squares on the left of your location.
+- Try considering both rows and columns, do not get stuck on one.
+- Maybe there are still some rows that sum to {height}.
+- Take a look in area X of the grid.
+- Consider backtracking in your tracks, maybe crosscheck you solution.
 """
 
 ######### System Prompts CONCLUSIVE   HINT LEVEL 2 #########

@@ -156,14 +156,14 @@ def callLLM_general_hint(hint_id, past_messages=[]):
 ################ Function call for progress feedback : """Directional hint"""    HINT LEVEL : 1 ################
 ################
 
-def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, past_messages=[]):
+def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, last_location, past_messages=[]):
     """
     Function to call the Azure LLM for progress feedback with a directional hint.
     The directional aspect depends on the next few best steps it is predicted for the user to take in order to solve the puzzle.
     Returns directional instructions to the user based on the next recommended steps (e.g. position in the grid, row number).
     """
     try:
-        print("Entering callLLM_directional_hint:: next_recommended_steps:: ", next_recommended_steps)
+        print("Entering callLLM_directional_hint:: next_recommended_steps:: ", next_recommended_steps, " last_location:: ", last_location)
         if completed:
             return "The puzzle is already completed. No further steps needed."
         else:
@@ -176,12 +176,12 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMea
             # 2. Use the locations for each step and decide on overall area to focus on
             overall_area = decide_overall_area(locations_next_steps)
             print("overall_area:: ", overall_area)
-            # 3. Generate a hint based on the area to focus on
-            system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area)
+            # 3. Generate a hint based on the area to focus on 
+            system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
             user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle."
             
             # return "test"
-            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
+            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=past_messages)
             print("callLLM_conclusive_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"

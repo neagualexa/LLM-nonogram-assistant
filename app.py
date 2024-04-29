@@ -188,7 +188,7 @@ def check_puzzle_progress():
         response_llm = callLLM_general_hint(hint_id, messages_cache)
     elif hint_level == 1:
         """Directional hint"""
-        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, messages_cache)
+        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, lastPressedCell_1, messages_cache)
     elif hint_level == 2:
         "Conclusive hint"
         response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)
