@@ -32,6 +32,9 @@ def system_prompt_directional_hint(next_steps, height, width, overall_area):
 def system_prompt_conclusive_hint(next_steps):
     return sys_conclusive_hint.format(next_steps=next_steps)
 
+def system_prompt_meaning_hint(meaning):
+    return sys_meaning_hint.format(meaning=meaning)
+
 ######### System Prompts GENERAL     HINT LEVEL 0 #########
 sys_general_hint = """You are a master solver of nonogram puzzles. You know every best strategy and rule to solve a nonogram puzzle. 
 In nonograms, the numbers shown on the left and above the crossword - describe the groups of painted squares (which go in sequence, no blanks) horizontally and vertically accordingly. The order of these numbers describes the order of location of these groups, but it is unknown where each group starts and finishes (in fact it is the task of the puzzle to define their location). Each separate number means a separate group of the given size (i.e. number 5 - means a group of five painted squares in sequence, 1 - a group of only one painted square). The groups are separated by at least one empty square.
@@ -90,6 +93,11 @@ Here are some examples of hints:
 - How about filling the square at row column . Would that help you progress?
 - Squares on row i such as (row_i,column) and (row_i,column) have definite positions.
 - Consider backtracking in your tracks, maybe crosscheck you solution at location (row, column).
+"""
+
+######### System Prompts MEANING      HINT LEVEL 7 #########
+sys_meaning_hint = """Write me a riddle about `{meaning}`. Keep the riddle in one line, short and simple. 
+Start your riddle with: 'Hint: '. Only return the riddle.". 
 """
 
 

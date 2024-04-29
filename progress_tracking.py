@@ -48,7 +48,8 @@ def track_user_level_progress(username, level, progress):
         
 def define_hint_level(username, level, hint_level_duration=2):
     """
-    Define the level of the hint based on the progress of the user over time.
+    Define the level of the hint based on the progress of the user over time. 
+    Move through the hint levels based on the progress of the user over time (e.g. at the beginning; close to end game).
     {username: {level: (previous progress, progress)}}
 
     progress differece = a positive value indicates progress, a negative value indicates a decrease in progress, and 0 indicates stagnant progress.
@@ -57,24 +58,39 @@ def define_hint_level(username, level, hint_level_duration=2):
     0: general game rule hints  (return a general strategy or rule)
     1: directional hints        (return a row or column or area)
     2: conclusive hints         (return a correct cell)
+    7: meaning hints            (return a riddle about what the grid represents)
     
     hint_level_duration = a user will receive hints of the same level for a certain number of interactions before the hint level is changed.
     (nb hints given on same level = hint_level_duration + 1)
     """
+    
+    if user_level_progress[username][level][1] == 1:
+        # if the user has completed the level, provide meaning hints
+        user_level_progress[username]["hint_level"] = 7
+        return
+    
     if user_level_progress[username]["hint_session_counter"] < hint_level_duration:
         # if the user is still in the same hint level session, provide hints of the same level until the session is over
         user_level_progress[username]["hint_session_counter"] += 1
         return
     
     user_level_progress[username]["hint_session_counter"] = 0
-    progress_differece = user_level_progress[username][level][1] - user_level_progress[username][level][0]
+    progress_differece = user_level_progress[username][level][1] - user_level_progress[username][level][0]  # current progress - previous progress
     
     if progress_differece <= 0:
         # if user is stuck at the same progress level (stagnant or negative progress)
-        user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 2 else 2
+        if user_level_progress[username][level][1] < 0.3:
+            # at the beginning of the game, prioritise general game rule & directional hints
+            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 1 else 1
+        else:
+            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 2 else 2
     else:
         # if user is making progress
-        user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 0 else 0
+        if user_level_progress[username][level][1]  > 0.8:
+            # towards the end of the game, prioritise directional & conclusive hints
+            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 1 else 1
+        else:
+            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 0 else 0
 
 def recommend_next_steps(no_next_steps, progressGrid, solutionGrid, last_interactions, row_clues, column_clues):
     """

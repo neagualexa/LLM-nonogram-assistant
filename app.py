@@ -14,7 +14,8 @@ from azure_inference_chat import (
     callLLM_progress_checker,
     callLLM_general_hint,
     callLLM_directional_hint,
-    callLLM_conclusive_hint
+    callLLM_conclusive_hint,
+    callLLM_meaning_hint
 )                
 # from old.azure_inference import callLLM_progress_checker                            # azure llm non chat
 # from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
@@ -131,7 +132,7 @@ def check_puzzle_progress():
     hint_level = user_level_progress[username]["hint_level"]
     # hint_level = 2 # for testing
     
-    if hint_level > 0:
+    if hint_level > 0 and not completed:
         ##### Fetch the last interactions
         if len(csv_handler_interaction.read_entries()) == 0:
             hint_level = 0
@@ -148,14 +149,15 @@ def check_puzzle_progress():
             next_recommended_steps, _ = recommend_next_steps(no_next_steps=5, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
     ##### Save the data to the CSV Progress database
-    if not completed:
-        # count_entries = len(csv_handler_progress.read_entries())
+    try:
         new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': "-", 'Hint_Response': "-", 'Observation_Response': "-", 'Positioning_Response': "-", 'Position_Description': "-", 'Overall_Latency': "-", 'Hint_Latency': "-", 'Observation_Latency': "-", 'Position_Latency': "-", 'Hint_Model': "-", 'Observation_Model': "-", 'Position_Model': "-", 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
+    except Exception as e:
+        print("Error saving progress data:: ", e)
         
     ############################################## call LLM for response depending on the hint level
     messages_cache = format_history(fetch_last_5_messages_cached(hint_level))
-    print("messages_cache:: ", messages_cache)
+    # print("messages_cache:: ", messages_cache)
     response_llm = ""
     if hint_level == 0:
         """General rules hint"""
@@ -166,6 +168,9 @@ def check_puzzle_progress():
     elif hint_level == 2:
         "Conclusive hint"
         response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)
+    elif hint_level == 7:
+        """Meaning hint"""
+        response_llm = callLLM_meaning_hint(completed, levelMeaning, hint_id, messages_cache)
     #####
     # try:
     #     url = 'http://localhost:5005/verbal_hint'
@@ -255,7 +260,11 @@ def record_interactions():
     
     ##### Save the data to the CSV Interaction database
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
-    new_entry = {'id': interaction_counter, 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y', 'Predicted_row': next_recommended_steps[0], 'Predicted_col': next_recommended_steps[1]}    
+    new_entry = {'id': interaction_counter, 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y', 'Predicted_row': 0, 'Predicted_col': 0}    
+    if recommend_next_steps != []:
+        if next_recommended_steps != []:
+            new_entry['Predicted_row'] = next_recommended_steps[0][0]
+            new_entry['Predicted_col'] = next_recommended_steps[0][1]
     csv_handler_interaction.add_entry(new_entry)
     increment_interaction_counter()
     

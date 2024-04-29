@@ -17,7 +17,8 @@ from system_prompt import (
 
     system_prompt_general_hint,
     system_prompt_directional_hint,
-    system_prompt_conclusive_hint
+    system_prompt_conclusive_hint,
+    system_prompt_meaning_hint
 )
 from grid_difference_checker import (
     string_to_lists_grids, 
@@ -219,7 +220,7 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
             response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
             print("callLLM_conclusive_hint:: response:: ", response)
             
-            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+            # if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
             response = response.split('\n')[0].strip()                          # remove ending whitespace
             response = remove_after_last_punctuation(response)                  # remove unfinished sentences
             
@@ -235,7 +236,43 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
     except Exception as e:
         print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
         return "Error in callLLM_conclusive_hint:: " + str(e)
-    
+
+
+################
+################ Function call for progress feedback : """Meaning hint"""    HINT LEVEL : 7 ################
+def callLLM_meaning_hint(completed, meaning_level, hint_id, past_messages=[]):
+    """
+    Function to call the Azure LLM for a meaning hint.
+    The meaning hint is a hint that is given when the user has completed the puzzle and is looking for a riddle or meaning behind the puzzle.
+    Returns a riddle or a meaning behind the puzzle.
+    """
+    try:
+        if completed:
+            system_message_meaning_hint = system_prompt_meaning_hint(meaning_level)
+            user_message = "What does the puzzle represent? Can you give me a riddle or meaning behind the puzzle?"
+            
+            response, latency = callAzureLLM(user_message, system_message=system_message_meaning_hint, max_tokens=50, past_messages=[])
+            print("callLLM_meaning_hint:: response:: ", response)
+            
+            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+            response = response.split('\n')[0].strip()                          # remove ending whitespace
+            response = remove_after_last_punctuation(response)                  # remove unfinished sentences
+            
+            try:
+                ############ Save CSV entry
+                new_entry_attributes = {'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
+                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
+            except Exception as e:
+                print("Error in saving CSV entry:: ", e) 
+            
+            return response
+        else:
+            return "The puzzle is not completed yet. No meaning hint available."
+        
+    except Exception as e:
+        print("callLLM_meaning_hint:: The request failed with status code: " + str(e))
+        return "Error in callLLM_meaning_hint:: " + str(e)
+
 ################
 ################ Formating the response ################
 
