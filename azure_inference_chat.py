@@ -249,9 +249,9 @@ def callLLM_meaning_hint(completed, meaning_level, hint_id, past_messages=[]):
     try:
         if completed:
             system_message_meaning_hint = system_prompt_meaning_hint(meaning_level)
-            user_message = "What does the puzzle represent? Can you give me a riddle or meaning behind the puzzle?"
+            user_message = system_message_meaning_hint
             
-            response, latency = callAzureLLM(user_message, system_message=system_message_meaning_hint, max_tokens=50, past_messages=[])
+            response, latency = callAzureLLM(user_message, system_message="", max_tokens=50, past_messages=[])
             print("callLLM_meaning_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
@@ -265,7 +265,7 @@ def callLLM_meaning_hint(completed, meaning_level, hint_id, past_messages=[]):
             except Exception as e:
                 print("Error in saving CSV entry:: ", e) 
             
-            return response
+            return "Puzzle meaning riddle: "  + response
         else:
             return "The puzzle is not completed yet. No meaning hint available."
         

@@ -96,9 +96,7 @@ Here are some examples of hints:
 """
 
 ######### System Prompts MEANING      HINT LEVEL 7 #########
-sys_meaning_hint = """Write me a riddle about `{meaning}`. Keep the riddle in one line, short and simple. 
-Start your riddle with: 'Hint: '. Only return the riddle.". 
-"""
+sys_meaning_hint = """Write me a riddle about `{meaning}`. Keep the riddle in one line, short and simple. Start your riddle with: 'Hint: '. Only return the riddle. """
 
 
 
