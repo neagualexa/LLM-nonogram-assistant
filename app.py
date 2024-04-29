@@ -114,8 +114,11 @@ def check_puzzle_meaning():
     
     # Save the data to the CSV database
     count_entries = len(csv_handler_meaning.read_entries())
-    new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Meaning': solution, 'Guess': user_guess, 'Approved': response, 'Model': 'HF Phi-3-mini-4k-instruct', 'Latency': meaning_latency, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-    csv_handler_meaning.add_entry(new_entry)
+    try:
+        new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Meaning': solution, 'Guess': user_guess, 'Approved': response, 'Model': 'HF Phi-3-mini-4k-instruct', 'Latency': meaning_latency, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        csv_handler_meaning.add_entry(new_entry)
+    except Exception as e:
+        print("Error saving meaning data:: ", e)
     
     return response
 
