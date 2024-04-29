@@ -30,7 +30,7 @@ from grid_difference_checker import (
     count_consecutive_cells, 
     decide_overall_area
 )
-from puzzle_checker_inference import component_pipeline_query_hf
+from hf_inference import component_pipeline_query_hf
 from data_collection import csv_handler_progress
 '''
 HELP: https://python.langchain.com/docs/integrations/chat/azureml_chat_endpoint
@@ -47,7 +47,7 @@ position_model      = "Azure Llama 3 8b Instruct" #"HF Mixtral-8x7B-Instruct-v0.
 system_message = "You are NonoAI, a helpful assistant replying the user's questions regarding Nonogram/Griddler puzzles. Reply in short sentences."
 
 class LlamaCustomContentFormatter(ContentFormatterBase):
-    """Custom Content formatter for LLaMa 2"""
+    """Custom Content formatter for LLama extended from langchain's ContentFormatterBase"""
 
     def format_request_payload(self, prompt: str, model_kwargs: Dict) -> bytes:
         """Formats the request according to the chosen api"""
@@ -57,12 +57,11 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
         request_payload = json.dumps(
             {
                 "messages": [
-                    # comment system message and history if using langchain
-                    {"role": "system", "content": model_kwargs.get("system_message")},         # langchain does the system message magic
-                    *model_kwargs.get("history"),                          # langchain does the memory magic
-                    {"role": "user", "content": prompt}                    # langchain adds the history into the prompt with System, AI, Human labels
+                    {"role": "system", "content": model_kwargs.get("system_message")},      # langchain does the system message magic
+                    *model_kwargs.get("history"),                                           # langchain does the memory magic
+                    {"role": "user", "content": prompt}                                     # langchain adds the history into the prompt with System, AI, Human labels
                 ],
-                "temperature": model_kwargs.get("temperature"),             # can add default value here
+                "temperature": model_kwargs.get("temperature"),                             # can add default value here
                 "max_tokens": model_kwargs.get("max_tokens"),
             }
         )
@@ -70,16 +69,17 @@ class LlamaCustomContentFormatter(ContentFormatterBase):
         return str.encode(request_payload)
 
     def format_response_payload(self, output: bytes) -> str:
-        """Formats response"""
+        """Formats response depending on the chosen api"""
         # print("output:: ", output)
         return json.loads(output)["choices"][0]["message"]["content"]
     
-# NOTES:
+# NOTES on LLM Memory Management in the Content Formatter:
 # conversation memory can be done through adding multiple messages (make sure JSON is correct, so comma at end)  -> memory preserved as we fetch it from DB
 # OR through adding the conversation into the prompt (as langchain does it) -> memory lost at every app restart
 
 content_formatter = LlamaCustomContentFormatter()
 
+# Langchain's Azure LLM endpoint for chat
 llm = AzureMLOnlineEndpoint(
     endpoint_url=API_URL,
     endpoint_api_type="serverless",
@@ -90,6 +90,7 @@ llm = AzureMLOnlineEndpoint(
 
 ################
 ################ Function call for chat message with Azure ################
+################
 
 def callAzureLLM(user_message, system_message=system_message, max_tokens=100, past_messages=[]):
     
@@ -117,6 +118,7 @@ def callAzureLLM(user_message, system_message=system_message, max_tokens=100, pa
 
 ################       
 ################ Function call for progress feedback : """General rules hint"""  HINT LEVEL : 0 ################
+################
 
 def callLLM_general_hint(hint_id, past_messages=[]):
     """
@@ -152,6 +154,7 @@ def callLLM_general_hint(hint_id, past_messages=[]):
 
 ################
 ################ Function call for progress feedback : """Directional hint"""    HINT LEVEL : 1 ################
+################
 
 def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, past_messages=[]):
     """
@@ -198,10 +201,9 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMea
         print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
         return "Error in callLLM_conclusive_hint:: " + str(e)
 
-
-
 ################   
 ################ Function call for progress feedback : """Conclusive hint"""    HINT LEVEL : 2 ################
+################
 
 def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_messages=[]):
     """
@@ -237,9 +239,10 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
         print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
         return "Error in callLLM_conclusive_hint:: " + str(e)
 
-
 ################
 ################ Function call for progress feedback : """Meaning hint"""    HINT LEVEL : 7 ################
+################
+
 def callLLM_meaning_hint(completed, meaning_level, hint_id, past_messages=[]):
     """
     Function to call the Azure LLM for a meaning hint.
@@ -275,6 +278,7 @@ def callLLM_meaning_hint(completed, meaning_level, hint_id, past_messages=[]):
 
 ################
 ################ Formating the response ################
+################
 
 def filter_crop_llm_response(response):
     """
@@ -307,7 +311,10 @@ def remove_after_last_punctuation(input_string):
     
 
 ################
-################ Function call for progress feedback : """Directional hint""" OLD VERSION ################   
+################ Function call for progress feedback :  """Directional hint"""  OLD VERSION ################
+################ Available for reference for both Azure and HF Inference methods            ################
+################
+   
 def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, past_messages=[]):
     """
     Function to call the Azure LLM for progress feedback with a directional hint.

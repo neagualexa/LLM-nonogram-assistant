@@ -9,7 +9,7 @@ from langchain_community.llms.azureml_endpoint import (
 )
 from system_prompt import system_prompt, system_prompt_positioning, system_prompt_observe_around, system_prompt_hint
 from grid_difference_checker import string_to_lists_grids, compare_grids, generate_mistake_markers, print_format_cellStates, random_element, describe_point_position, count_consecutive_cells
-from puzzle_checker_inference import component_pipeline_query_hf
+from hf_inference import component_pipeline_query_hf
 '''
 HELP: https://python.langchain.com/docs/integrations/llms/azure_ml/
 https://learn.microsoft.com/en-us/azure/machine-learning/how-to-deploy-models-llama?view=azureml-api-2 

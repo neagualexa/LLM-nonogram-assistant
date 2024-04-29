@@ -18,8 +18,8 @@ from azure_inference_chat import (
     callLLM_meaning_hint
 )                
 # from old.azure_inference import callLLM_progress_checker                            # azure llm non chat
-# from old.llm_chain_memory import callLLM                # azure llm with langchain and llm chain memory (memory lost at every app restart)
-from puzzle_checker_inference import meaning_checker_hf   # HF llm checking validity of user meaning
+# from old.llm_chain_memory import callLLM                  # azure llm with langchain and llm chain memory (memory lost at every app restart)
+from hf_inference import meaning_checker_hf                 # HF llm checking validity of user meaning
 from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
 from grid_difference_checker import count_consecutive_cells
 from progress_tracking import (
@@ -31,7 +31,7 @@ from progress_tracking import (
 
 app = Flask(__name__)
 
-# Create a limiter with the default rate limit (e.g., 1 request per 0.2 seconds)
+# Create a limiter with the default rate limit
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -61,6 +61,9 @@ conn.close()
 
 @app.route('/')
 def index():
+    """
+    Route to the main page. Shows the chat interface with all history of messages.
+    """
     global messages_cache
     messages = fetch_messages_cached()
     messages_cache = format_history(messages)
@@ -68,6 +71,10 @@ def index():
 
 @app.route('/send_message', methods=['POST'])
 def send_message():
+    """
+    Route to send a message to the chatbot. Called by the form in the index.html file.
+    When completed, redirects to the main page.
+    """
     user_message = request.form.get('user_message')
     print('user_message:: ', user_message)
     
@@ -92,29 +99,43 @@ def send_message():
 
 @app.route('/check_puzzle_meaning', methods=['POST'])
 def check_puzzle_meaning():
-    # Get puzzleMeaning from the form
+    """
+    Route called by Unity to check the meaning of the user's guess for the puzzle.
+    """
     puzzle_meaning = request.form.get('puzzleMeaning')
-    # Load puzzle meaning from string to json
     puzzle_meaning = json.loads(puzzle_meaning)
     user_guess = puzzle_meaning['user_guess']
     solution = puzzle_meaning['solution']
     username = puzzle_meaning['username']
     level = puzzle_meaning['level']
     
+    # Call the Hugging Face model to check the meaning of the user's guess
     response, meaning_latency = meaning_checker_hf(user_guess, solution)
     
     # Save the data to the CSV database
     count_entries = len(csv_handler_meaning.read_entries())
-    new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Meaning': solution, 'Guess': user_guess, 'Approved': response, 'Model': 'HF LaMini-Flan-T5-783M', 'Latency': meaning_latency, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    new_entry = {'id': count_entries, 'User': username, 'Level': level, 'Meaning': solution, 'Guess': user_guess, 'Approved': response, 'Model': 'HF Phi-3-mini-4k-instruct', 'Latency': meaning_latency, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     csv_handler_meaning.add_entry(new_entry)
     
     return response
 
 @app.route('/check_puzzle_progress', methods=['POST'])
 def check_puzzle_progress():
-    # Get puzzleMeaning from the form
+    """
+    Route called by Unity to check the progress of the user in the puzzle and ask for a hint based on their progress.
+    
+    Based on the calculated progress difference, the hint level is updated as follows:
+    - If the user is stuck at the same progress level (stagnant or negative progress), the hint level is increased.
+    - If the user is making progress, the hint level is decreased.
+    
+    Hint levels hierarchy:
+    0: general game rule hints  (return a general strategy or rule)
+    1: directional hints        (return a row or column or area)
+    2: conclusive hints         (return a correct cell)
+    7: meaning hints            (return a riddle about what the grid represents)
+    
+    """
     puzzle_progress = request.form.get('puzzleProgress')
-    # Load puzzle meaning from string to json
     puzzle_progress = json.loads(puzzle_progress)
     cellStates = puzzle_progress['cellStates']
     solutionCellStates = puzzle_progress['solutionCellStates']
@@ -171,7 +192,7 @@ def check_puzzle_progress():
     elif hint_level == 7:
         """Meaning hint"""
         response_llm = callLLM_meaning_hint(completed, levelMeaning, hint_id, messages_cache)
-    #####
+    ##### Request for the hint text to be verbalised (Text-to-Speech pipeline)
     # try:
     #     url = 'http://localhost:5005/verbal_hint'
     #     data = {'responseText': response_llm, 'counter': 0}
@@ -191,6 +212,9 @@ def check_puzzle_progress():
 
 @app.route('/verbalise_hint', methods=['POST'])
 def verbalise_hint():
+    """
+    Route called by Unity to verbalise the hint text.
+    """
     hint = json.loads(request.form.get('hint'))
     try:
         url = 'http://localhost:5005/verbal_hint'
@@ -204,6 +228,9 @@ def verbalise_hint():
         
 @app.route('/clear_history')
 def clear_history():
+    """
+    Route to clear all messages from the database history and the messages cache.
+    """
     # Clear all messages from the database
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -218,6 +245,10 @@ def clear_history():
 
 @app.route('/end_game', methods=['POST'])
 def save_game():
+    """
+    Route called by Unity to save the game data to the CSV database. 
+    Game data includes the user's progress in each level, the time taken to complete each level, the number of hints used, and the completion status of each level.
+    """
     userGameData = request.form.get('EndGameData').lower() # lower() to avoid case sensitivity between boolean in python and c#
     # print("userGameData:: ", userGameData)
     userGameData = json.loads(userGameData)
@@ -233,6 +264,12 @@ def save_game():
 @app.route('/record_interaction', methods=['POST'])
 @limiter.limit("1 per 0.2 seconds")
 def record_interactions():
+    """
+    Route called by Unity to record the user's interactions with the Nonogram puzzle (clicks on each square of the puzzle).
+    Records the user's last 3 interactions, the progress of the puzzle, and the predicted next best steps.
+    
+    Data saved is used to examine the accuracy of the Nonogram Solver's predictions for the next best steps. 
+    """
     interactions = request.form.get('GridInteractions')
     interactions = json.loads(interactions)
     username = interactions["username"]
@@ -278,7 +315,14 @@ def record_interactions():
     
     return "Saved interaction data successfully!"
 
+############################################################################################################
+# Functions to interact with the SQLite database
+############################################################################################################
+
 def fetch_messages_cached():
+    """
+    Fetch all messages from the database and format them for the chat interface.
+    """
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC')
@@ -288,6 +332,9 @@ def fetch_messages_cached():
     return messages
 
 def fetch_last_message_cached():
+    """
+    Fetch the last message from the database.
+    """
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM messages ORDER BY timestamp DESC LIMIT 1')
@@ -298,7 +345,7 @@ def fetch_last_message_cached():
 
 def fetch_last_5_messages_cached(hint_level):
     """
-    Fetch the last 5 messages from the database that have the same hint level
+    Fetch the last 5 messages from the database that have the same hint level.
     """
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -309,7 +356,10 @@ def fetch_last_5_messages_cached(hint_level):
     return messages
 
 def insert_new_message_cache(user_message, response_llm, hint_level):
-    # Add user message to the database
+    """
+    Function to insert a new message into the database. Also updates the messages cache.
+    Message format: (user message, llm response, hint level)
+    """
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('INSERT INTO messages (user_message, ai_message, hint_level) VALUES (?, ?, ?)',
@@ -326,12 +376,19 @@ def insert_new_message_cache(user_message, response_llm, hint_level):
     messages_cache.insert(0, (m for m in format_message(new_message)))
 
 def format_message(message):
+    """
+    Function to format the message to match the expected history format for the chat LLMs and the chat interface UI.
+    """
     formatted_message = [
         {"role": "user", "content": message["user_message"]},
         {"role": "assistant", "content": message["ai_message"]},
     ]
     return formatted_message
+
 def format_history(messages):
+    """
+    Function to format the a goup of messages to match the expected format.
+    """
     formatted_messages = [m for message in messages for m in format_message(message)]
     return formatted_messages
 
