@@ -34,6 +34,10 @@ class NonogramSolver:
         self.priority_lines = {}
         self.process_explained = []
         
+        # tracking progress for benchmarking bot
+        self.progress = 0
+        self.prev_progress = 0
+        
         self.savepath = savepath
         if self.savepath != '': self.n = 0
 
@@ -79,13 +83,15 @@ class NonogramSolver:
                                 self.n += 1
                     self.update_done(row_ind, ind1)                 # update the rows_done or cols_done list when a row or column is completed
             self.check_solved()                                     # check if the puzzle is solved
-    
-    
+        if self.solved: self.solution_grid = self.board.copy()      # set the solution grid to the board when the puzzle is solved
+        
     def recommend_next_action(self, no_next_steps = 1):
         """
         Method that recommends the next cell to fill in the nonogram puzzle based on the current grid progress state.
         The method also considers the last interactions with the grid to prioritize the rows and columns that were last interacted with. (including the rows and columns right next to the last interacted row or column)
         Always look in the vicinity of the last interaction.
+        
+        Set no_next_steps to 100 to get all the recommended next steps for 10x10 nonogram puzzle.
         """
         next_recommended_steps = []
         self.process_explained = [] # reset the process explained
@@ -321,7 +327,7 @@ class NonogramSolver:
         These consistent values indicate places where there is only one possible solution for that cell, which can be filled into the nonogram grid.
         """
         return [(n, np.unique(i)[0]) for n, i in enumerate(np.array(values).T) if len(np.unique(i)) == 1]
-
+    
     def update_done(self, row_ind, idx):
         """
         Public method that updates the rows_done or cols_done list when a row or column is completed.
@@ -352,6 +358,12 @@ class NonogramSolver:
         if 0 not in self.rows_done and 0 not in self.cols_done:
             self.solved = True
             
+    def check_with_solution(self):
+        """
+        Method that checks if the progress grid is the same as the solution grid.
+        """
+        self.solved = self.board == self.solution_grid
+            
     def display_board_temporary(self):
         clear_output(wait=True) 
         plt.imshow(self.board, cmap='Greys')
@@ -377,6 +389,154 @@ class NonogramSolver:
             for k in range(self.no_of_cols):
                 increased_board[j * increase_size : (j+1) * increase_size, k * increase_size : (k+1) * increase_size] = self.board[j][k]
         plt.imsave(os.path.join(self.savepath, f'{name}.jpeg'), increased_board, cmap='Greys', dpi=1000)
+
+
+    #########
+    ######### BENCHMARKING BOT #########
+    ######### Simulates a Human 
+    #                   - making mistakes while completing the puzzle (misinterpreting the clues) and 
+    #                   - not understanding the hint provided(ignoring the recommended best next steps).
+    #########
+    
+    def solve_with_mistakes(self, prob_mistake=1, prob_respect_recommendation=1):
+        """
+        Method that tries to solve a nonogram puzzle by following the `solve` method, but with a probability of making a mistake
+        (mistake = completing a cell that is not unique throughout all the combinations of the line (in `get_only_one_option` also return a non unique cell)).
+        When a mistake is made, the solver will ask for the recommendation of the next action to take from `recommended_next_action` method.
+        
+        Parameters for describing the process:
+            - probability of making a mistake/non optimal step
+            - probability of respecting the recommended next steps
+        """
+        # step 1: Defining all possible solutions for every row and col (indepenedently of the other rows and cols)
+        self.rows_possibilities = self.create_possibilities(self.ROWS_VALUES, self.no_of_cols)
+        self.cols_possibilities = self.create_possibilities(self.COLS_VALUES, self.no_of_rows)
+        
+        while not self.solved:
+            # step 2: Order indici by lowest (start with the rows and cols with the lowest number of possibilities -> most likely to have larger clues)
+            self.lowest_rows = self.select_index_not_done(self.rows_possibilities, 1)                   # get the rows with the lowest number of possibilities
+            self.lowest_cols = self.select_index_not_done(self.cols_possibilities, 0)                   # get the cols with the lowest number of possibilities
+            self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])   # sort by lowest number of possibilities
+
+            # step 3: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
+            for ind1, _, row_ind in self.lowest:
+                if self.solved:
+                    break
+                """ `row_ind` is a boolean that indicates whether the current context is a row (True) or a column (False). """
+                if not self.check_done(row_ind, ind1):
+                    # if the row or column is not done yet, get the possibilities for the row or column
+                    if row_ind: values = self.rows_possibilities[ind1]  # get the possibilities for the row
+                    else:       values = self.cols_possibilities[ind1]  # get the possibilities for the column
+                    same_ind = self.get_only_one_option(values)         # get the cells that have only one possible value across all possibilities in the line   
+                    
+                    """ For a prob_mistake probability, make a mistake by also considering a non unique cell """
+                    mistake_ind = self.add_nonunique_option(same_ind, row_ind) if np.random.rand() < prob_mistake else same_ind
+                    # print(f"unique cells and one mistake on `{'row' if row_ind else 'column'} {ind1}`: len(same_ind)={len(same_ind)} -> len(mistake)={len(mistake_ind)}:{mistake_ind}")
+                    
+                    for ind2, val in mistake_ind:
+                        if self.solved:
+                            break
+                        # for each cell with only one possible position in line, update the board with the value
+                        
+                        # get the row and column index based on the row_ind boolean (whether it is a row or a column)
+                        if row_ind: ri, ci = ind1, ind2                 # if row
+                        else:       ri, ci = ind2, ind1                 # if column
+                        
+                        # update the board only for the cell that is gray (null cell)
+                        if self.board[ri][ci] == 0:
+                            self.board[ri][ci] = val                # update the cell with the value
+                            # print(f"update the cell {ri, ci} -> {row_ind} with the value {val}")
+                            if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)   # remove the possibilities for the column depending on the value of the cell
+                            else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)   # remove the possibilities for the row depending on the value of the cell
+
+                            # ignore empty cells that should be empty
+                            if not (self.board[ri][ci] == self.solution_grid[ri][ci] == -1):
+                                """Update progress made by the bot"""
+                                self.prev_progress = self.progress
+                                self.progress = self.calculate_progress()
+                            
+                                """Update the last 3 interactions with the grid"""
+                                if len(self.last_interactions) <= 3:
+                                    #add most recent one at the beginning of the list
+                                    self.last_interactions = [(ri, ci)] + self.last_interactions
+                                else:
+                                    #add most recent one at the beginning of the list
+                                    self.last_interactions = [(ri, ci)] + self.last_interactions[:-1]
+                            
+                            # self.display_board_temporary()
+                                
+                        print("Progress progress: ", self.progress, " prev_progress: ", self.prev_progress)
+                        """If progress stagnates or gets worse, get the recommended next steps and update the board with the recommended next step."""
+                        if self.progress <= self.prev_progress:
+                            print("Progress stagnated or got worse! progress: ", self.progress, " prev_progress: ", self.prev_progress)
+                            self.ask_for_recommendation(row_ind, prob_respect_recommendation)
+                                
+                    self.update_done(row_ind, ind1)                 # update the rows_done or cols_done list when a row or column is completed
+            self.check_with_solution() 
+            print(f"self.solved: {self.solved}")
+            if not self.solved:
+                """Ask for the recommended next steps if the puzzle is not solved yet. Ask for next steps for specific row and column."""
+                self.ask_for_recommendation(row_ind, prob_respect_recommendation)
+   
+    def add_nonunique_option(self, same_ind, row_ind):
+        """
+        Funciton adds/change a wrong cell to the list of cells that have only one possible solution for that cell.
+        
+        With a probability of 0.5:
+            - Cell to be added is next to the last cell in the list. Usually to the right or below the last cell depending if row or column.
+            - Invert the value of one random cell in the list.
+            
+        same_ind: list of tuples (index, value) in a row or column
+        """
+        upper_limit = self.no_of_cols if row_ind else self.no_of_rows       # upper limit of the row (width=number of columns) or column (height=number of rows)
+        if len(same_ind) == 0: return same_ind
+        
+        prob = np.random.rand()
+        if prob < 0.5:
+            """ Add a mistake cell """
+            if same_ind[-1][0] < upper_limit - 1:
+                return same_ind + [(same_ind[-1][0] + 1, same_ind[-1][1])]      # add another cell to the right or below the last cell of the same value
+            else:
+                return same_ind[:-1] + [(same_ind[-1][0], -(same_ind[-1][1]) )] # make last cell wrong
+        else:
+            """ Change a cell to be wrong """
+            random_idx = np.random.randint(0, len(same_ind)-1)
+            return same_ind[:random_idx] + [(same_ind[random_idx][0], -(same_ind[random_idx][1]) )] + same_ind[random_idx+1:]
+    
+    def calculate_progress(self):
+        """
+        Calculate the progress by counting the number of cells that are correct in the progress grid and dividing to the total number of cells.
+        """
+        progress = 0
+        no_cells_correct = 0   
+        total_cells = self.no_of_cols * self.no_of_rows  
+        # must ignore the initial cells and set all of them to -1 (empty) -> as it is done in the human UI
+        self.progress_grid = [[-1 if cell == 0 else cell for cell in row] for row in self.board]
+        for i in range(self.no_of_rows):
+            for j in range(self.no_of_cols):
+                if self.progress_grid[i][j] == self.solution_grid[i][j]:
+                    no_cells_correct += 1
+                    
+        progress = no_cells_correct / total_cells
+        return progress
+
+    def ask_for_recommendation(self, row_ind, prob_respect_recommendation=1):
+        """
+        For a given row or column, ask for the recommended next steps if the progress stagnates or gets worse.
+        TODO: not sure about the row_ind remove possibilities for the column or row
+        """
+        # if a mistake was made, get the recommended next steps
+        bot_helper = NonogramSolver(ROWS_VALUES=self.ROWS_VALUES,COLS_VALUES=self.COLS_VALUES, PROGRESS_GRID=self.board, SOLUTION_GRID=self.solution_grid, LAST_INTERACTIONS=self.last_interactions)
+        next_recommended_steps = bot_helper.recommend_next_action(no_next_steps=1)
+        print(f"next_recommended_steps: {next_recommended_steps}")
+        if next_recommended_steps == []: self.solved = True
+        elif np.random.rand() < prob_respect_recommendation:
+            # if the recommendation is respected, update the board with the recommended next step
+            for step in next_recommended_steps:
+                ri, ci, val = step
+                self.board[ri][ci] = val
+                if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
+                else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
       
       
             
