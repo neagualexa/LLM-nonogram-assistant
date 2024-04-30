@@ -396,6 +396,7 @@ class NonogramSolver:
     ######### Simulates a Human 
     #                   - making mistakes while completing the puzzle (misinterpreting the clues) and 
     #                   - not understanding the hint provided(ignoring the recommended best next steps).
+    #         Probabilities are set for the bot to make mistakes and ignore the hint.
     #########
     
     def solve_with_mistakes(self, prob_mistake=1, prob_respect_recommendation=1):
