@@ -1,5 +1,5 @@
 from nonogram_solver import NonogramSolver
-from grid_difference_checker import zeroToOneIndexed
+from grid_difference_checker import zeroToOneIndexed, compare_grids
 
 user_level_progress = {}
 interaction_counter = 0
@@ -17,16 +17,31 @@ def track_hint_level(username, level, progressGrid, solutionGrid):
 def calculate_progress(progressGrid, solutionGrid):
     """
     Calculate the progress by counting the number of cells that are correct in the progress grid and dividing to the total number of cells.
+    
+    Need to take into account the following:
+        - current progress cells = supposed to be filled - supposed to be filled but empty + supposed to be empty - supposed to be empty but filled
+        - correct cells = supposed to be empty + supposed to be filled = total cells
+        - progress = current progress cells / total cells
+           BUT, empty grid progress is equal to (supposed to be empty / total cells), instead of 0.0
+           HENCE, distribute the progress on a 0.0 to 1.0 scale considering that (supposed to be empty / total cells) should be the minimum progress
+                IF all cells completed wrongly, progress is negative as nb_wrong_cells &  nb_missing_cells are both max
     """
     progress = 0
-    no_cells_correct = 0   
-    total_cells = len(progressGrid) * len(progressGrid[0])             
-    for i in range(len(progressGrid)):
-        for j in range(len(progressGrid[0])):
-            if progressGrid[i][j] == solutionGrid[i][j]:
-                no_cells_correct += 1
-                
-    progress = no_cells_correct / total_cells
+    total_cells = len(solutionGrid) * len(solutionGrid[0])
+    # use the compare_grids function to get the wrong cells and missing cells
+    differences = compare_grids(progressGrid, solutionGrid)
+    nb_wrong_cells = len(differences["wrong_selection"])            # supposed to be empty but filled
+    nb_missing_cells = len(differences["missing_selection"])        # supposed to be filled but empty
+    nb_expected_empty_cells = len(differences["expected_empty"])    # supposed to be empty
+
+    # supposed to be empty + supposed to be filled = total cells = correct cells
+    # supposed to be empty - supposed to be empty but filled + supposed to be filled - supposed to be filled but empty = current progress cells
+    # total cells - wrong cells - missing cells = current progress cells
+    progress = (total_cells - nb_wrong_cells - nb_missing_cells) / (total_cells) # BUT empty grid progress is equal to (supposed to be empty / total cells), instead of 0.0
+    
+    # distribute the progress on a 0.0 to 1.0 scale considering that (supposed to be empty / total cells) should be the minimum progress
+    progress = (progress - nb_expected_empty_cells / total_cells) / (1 - nb_expected_empty_cells / total_cells)
+
     return progress
 
 def track_user_level_progress(username, level, progress):
@@ -43,8 +58,9 @@ def track_user_level_progress(username, level, progress):
         user_level_progress[username][level] = (0,0)                                                            # (previous progress, progress)
         user_level_progress[username]["hint_level"] = 0
         user_level_progress[username]["hint_session_counter"] = 0
-    else:
-        user_level_progress[username][level] = (user_level_progress[username][level][1], progress)
+    
+    # always update the progress of the user
+    user_level_progress[username][level] = (user_level_progress[username][level][1], progress)
         
 def define_hint_level(username, level, hint_level_duration=2):
     """

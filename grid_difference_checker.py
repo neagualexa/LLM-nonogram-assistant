@@ -82,7 +82,8 @@ def compare_grids(user_progress, solution):
     """
     differences = {
         "wrong_selection": [],
-        "missing_selection": []
+        "missing_selection": [],
+        "expected_empty": []
     }
     filled = ['1', 1]
     empty  = ['0', 0]
@@ -97,6 +98,8 @@ def compare_grids(user_progress, solution):
                 # columns are x and rows are y; inverted row indices to have bottom left as (1,1)
                 # differences["missing_selection"].append((j+1, len(user_progress)-i)) # +1 to convert to 1-indexed
                 differences["missing_selection"].append((i+1, j+1))                 # cell is empty in the progress grid but should be filled in the solution grid (preserve row/column order: top left is (1,1))
+            if solution[i][j] in empty:
+                differences["expected_empty"].append((i+1, j+1))                    # cell is empty in the solution grid
     return differences
 
 def random_element(wrong_selections, missing_selections):
