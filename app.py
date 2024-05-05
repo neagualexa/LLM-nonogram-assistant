@@ -21,7 +21,7 @@ from azure_inference_chat import (
 # from old.llm_chain_memory import callLLM                  # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from hf_inference import meaning_checker_hf                 # HF llm checking validity of user meaning
 from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
-from grid_difference_checker import count_consecutive_cells
+from grid_difference_checker import count_consecutive_cells, zeroToOneIndexed
 from progress_tracking import (
     recommend_next_steps,
     track_hint_level,
@@ -170,6 +170,7 @@ def check_puzzle_progress():
             # predict next best steps
             row_clues, column_clues = count_consecutive_cells(solutionCellStates)
             last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
+            last_location = zeroToOneIndexed([lastPressedCell_1])
             next_recommended_steps, _ = recommend_next_steps(no_next_steps=5, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
     ##### Save the data to the CSV Progress database
@@ -188,7 +189,7 @@ def check_puzzle_progress():
         response_llm = callLLM_general_hint(hint_id, messages_cache)
     elif hint_level == 1:
         """Directional hint"""
-        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, lastPressedCell_1, messages_cache)
+        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, last_location, messages_cache)
     elif hint_level == 2:
         "Conclusive hint"
         response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)
@@ -196,13 +197,13 @@ def check_puzzle_progress():
         """Meaning hint"""
         response_llm = callLLM_meaning_hint(completed, levelMeaning, hint_id, messages_cache)
     ##### Request for the hint text to be verbalised (Text-to-Speech pipeline)
-    # try:
-    #     url = 'http://localhost:5005/verbal_hint'
-    #     data = {'responseText': response_llm, 'counter': 0}
-    #     response = requests.post(url, data=data)
-    #     print("response from verbal_hint:: ", response)
-    # except Exception as e:
-    #     print("error in /check_puzzle_progress connecting to /verbal_hint:: ", e)
+    try:
+        url = 'http://localhost:5005/verbal_hint'
+        data = {'responseText': response_llm, 'counter': 0}
+        response = requests.post(url, data=data)
+        print("response from verbal_hint:: ", response)
+    except Exception as e:
+        print("error in /check_puzzle_progress connecting to /verbal_hint:: ", e)
     ############################################## 
 
     if response_llm != "":
