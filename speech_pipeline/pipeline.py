@@ -20,7 +20,7 @@ def speech_pipeline(file_path):
     if use_azure:
         transcription = azure_stt.recognise_speech(file_path)           # azure STT
     else:
-        transcription = speech_to_text.transcribe_audio(file_path)    # local STT
+        transcription = speech_to_text.transcribe_audio(file_path)      # local STT
     
     print("Transcription of original: ", transcription)
     
@@ -59,8 +59,8 @@ def verbalise_hint(hint_text, counter):
     if use_azure:
         azure_tts.vocalise_text(hint_text, output_file_path)                                  # azure TTS (audio file not generated)
     else:
-        text_to_speech.get_audio_from_text(hint_text, output_file_path)     # local TTS
-        audio_functions.convert_to_standard_wav(output_file_path) # google tts does not save as standard wav
+        text_to_speech.get_audio_from_text(hint_text, output_file_path)                       # local TTS
+        audio_functions.convert_to_standard_wav(output_file_path)                             # google tts does not save as standard wav
         audio_functions.play_audio(output_file_path)
 
     # HTTP POST request to share the audio file to a server IP

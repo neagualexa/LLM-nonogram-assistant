@@ -11,7 +11,7 @@ def vocalise_text(text, output_file_path=None):
     speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
 
     # Set the voice name, refer to https://aka.ms/speech/voices/neural for full list.
-    speech_config.speech_synthesis_voice_name = "en-GB-SoniaNeural" #(GB) SoniaNeural OliviaNeural
+    speech_config.speech_synthesis_voice_name = "en-US-JennyMultilingualNeural"#"en-GB-OliviaNeural" #(GB) SoniaNeural OliviaNeural
 
     # Creates a speech synthesizer using the default speaker as audio output.
     speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)

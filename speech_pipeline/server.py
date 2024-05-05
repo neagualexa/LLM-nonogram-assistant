@@ -1,5 +1,6 @@
 from flask import Flask, request
 from flask_cors import CORS
+from threading import Lock
 from pipeline import speech_pipeline, verbalise_hint
 import time
 import os
@@ -7,6 +8,8 @@ import os
 app = Flask(__name__)
 # add cors support
 CORS(app)
+# to block multiple requests on same route
+lock = Lock()
 
 UPLOAD_FOLDER = './conversation'
 
@@ -52,30 +55,32 @@ def synth():
     
 @app.route('/verbal_hint', methods=['POST'])
 def ai_hint():
-    start_time = time.time()
-    try:
-        print("Received request to generate audio for AI response text")
+    # do not let another request to be processed until the previous one is done
+    with lock:
+        start_time = time.time()
+        try:
+            print("Received request to generate audio for AI response text")
+            
+            # Get the text from the request
+            pre_text = ""#"Hi! Here is a hint: "
+            response_text = request.form['responseText']
+            counter = request.form['counter']
+            print(counter, pre_text + response_text)
+            
+            # text to speech
+            file_path = './speech_pipeline/conversation/' + response_text + '.mp3'
+            audio_duration = verbalise_hint(pre_text + response_text, counter)
+            end_time = time.time()
+            # time lapse also contains the time taken to play the audio file        
+            print("/verbal_hint :: Time taken: ", end_time-start_time-audio_duration, "; audio duration to play out loud: ", audio_duration)  
+            #TODO: to be saved in a csv file alongside audio duration and response duration and level
+            
+            return 'File successfully received and processed! on file: ' + file_path
         
-        # Get the text from the request
-        pre_text = ""#"Hi! Here is a hint: "
-        response_text = request.form['responseText']
-        counter = request.form['counter']
-        print(counter, pre_text + response_text)
-        
-        # text to speech
-        file_path = './speech_pipeline/conversation/' + response_text + '.mp3'
-        audio_duration = verbalise_hint(pre_text + response_text, counter)
-        end_time = time.time()
-        # time lapse also contains the time taken to play the audio file        
-        print("/verbal_hint :: Time taken: ", end_time-start_time-audio_duration, "; audio duration to play out loud: ", audio_duration)  
-        #TODO: to be saved in a csv file alongside audio duration and response duration and level
-        
-        return 'File successfully received and processed! on file: ' + file_path
-    
-    except Exception as e:
-        print(f"Error processing file: {str(e)}")
-        os.remove(file_path)
-        return 'Error processing file', 500
+        except Exception as e:
+            print(f"Error processing file: {str(e)}")
+            os.remove(file_path)
+            return 'Error processing file', 500
     
     
 if __name__ == '__main__':
