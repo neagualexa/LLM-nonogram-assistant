@@ -55,14 +55,12 @@ def track_user_level_progress(username, level, progress, hint_level_duration):
                             }}
     """
     if username not in user_level_progress:
-        user_level_progress[username] = {level: (0, progress), "hint_level": 0, "hint_session_counter": hint_level_duration}      # (previous progress, progress)
+        user_level_progress[username] = {level: {"progress": (0, progress), "hint_level": 0, "hint_session_counter": hint_level_duration}}      # (previous progress, progress)
     elif level not in user_level_progress[username]:
-        user_level_progress[username][level] = (0,0)                                                            # (previous progress, progress)
-        user_level_progress[username]["hint_level"] = 0
-        user_level_progress[username]["hint_session_counter"] = hint_level_duration
+        user_level_progress[username][level] = {"progress": (0, progress), "hint_level": 0, "hint_session_counter": hint_level_duration}        # (previous progress, progress)
     
     # always update the progress of the user
-    user_level_progress[username][level] = (user_level_progress[username][level][1], progress)
+    user_level_progress[username][level]["progress"] = (user_level_progress[username][level]["progress"][1], progress)
         
 def define_hint_level(username, level, hint_level_duration):
     """
@@ -81,49 +79,52 @@ def define_hint_level(username, level, hint_level_duration):
     hint_level_duration = a user will receive hints of the same level for a certain number of interactions before the hint level is changed.
     (nb hints given on same level = hint_level_duration + 1)
     """
+    curr_progress = user_level_progress[username][level]["progress"][1]
+    prev_progress = user_level_progress[username][level]["progress"][0]
+    hint_level = user_level_progress[username][level]["hint_level"]
     
-    if user_level_progress[username][level][1] == 1:
+    if curr_progress == 1:
         # if the user has completed the level, provide meaning hints
-        user_level_progress[username]["hint_level"] = 7
+        user_level_progress[username][level]["hint_level"] = 7
         return
-    elif user_level_progress[username][level][1] > 0.5:
+    elif curr_progress > 0.5:
         # if user returns to the level after a long time, skip wait loop, provide directional & conclusive hints from the start
-        user_level_progress[username]["hint_session_counter"] = hint_level_duration
+        user_level_progress[username][level]["hint_session_counter"] = hint_level_duration
     
     ####### LOOP to wait for hint_level_duration interactions before changing hint level #######
-    if user_level_progress[username]["hint_session_counter"] < hint_level_duration:
+    if user_level_progress[username][level]["hint_session_counter"] < hint_level_duration:
         # if the user is still in the same hint level session, provide hints of the same level until the session is over
-        user_level_progress[username]["hint_session_counter"] += 1
+        user_level_progress[username][level]["hint_session_counter"] += 1
         return
     
-    user_level_progress[username]["hint_session_counter"] = 0
-    progress_differece = user_level_progress[username][level][1] - user_level_progress[username][level][0]  # current progress - previous progress
+    user_level_progress[username][level]["hint_session_counter"] = 0
+    progress_differece = curr_progress - prev_progress  # current progress - previous progress
     
     ####### Define the hint level based on the progress of the user over time #######
     if progress_differece <= 0:
         # if user is stuck at the same progress level (stagnant or negative progress)
-        if user_level_progress[username][level][1] < 0.3:
+        if curr_progress < 0.3:
             if level in levels_order[:3]:
                 """Start with General Hints for levels 1-3"""
-                user_level_progress[username]["hint_level"] = 0
+                hint_level = 0      # TODO: this is still broken, only needed for initial when starting the level the first time
             else:
                 """Start with Directional Hints for levels 4-7"""
-                user_level_progress[username]["hint_level"] = 1
+                hint_level = 1
             # at the beginning of the game, prioritise general game rule & directional hints
-            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 1 else 1
+            user_level_progress[username][level]["hint_level"] = hint_level + 1 if hint_level < 1 else 1
         else:
-            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 2 else 2
+            user_level_progress[username][level]["hint_level"] = hint_level + 1 if hint_level < 2 else 2
     else:
         # if user is making progress
-        if user_level_progress[username][level][1]  > 0.5:
+        if curr_progress  > 0.5:
             # towards the end of the game, prioritise directional & conclusive hints
-            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 1 else 1
+            user_level_progress[username][level]["hint_level"] = hint_level - 1 if hint_level > 1 else 1
         else:
             if level in levels_order[:3]:
-                print("General Hints for levels 1-3")
-                user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 0 else 0
+                """General Hints for levels 1-3"""
+                user_level_progress[username][level]["hint_level"] = hint_level - 1 if hint_level > 0 else 0
             else:
-                user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 1 else 1
+                user_level_progress[username][level]["hint_level"] = hint_level + 1 if hint_level < 1 else 1
 
 def recommend_next_steps(no_next_steps, progressGrid, solutionGrid, last_interactions, row_clues, column_clues):
     """
