@@ -53,6 +53,7 @@ Here are some rules for a new player to consider:
 - Avoid the rows or columns that have the small numbers as their clues. They are the hardest to solve.
 - The rows or columns that have the sum of the clues the largest are the easiest to solve.
 - Always remember there is at least one empty square between the groups of filled cells.
+- Use cross-referencing between rows and columns to identify cells that can be filled or marked as empty.
 - When deciding on the rows or columns to start with, sum up the clues and at least one empty square between the group.
 - Always look at both the column and row clue.
 """
