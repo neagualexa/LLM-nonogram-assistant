@@ -199,7 +199,7 @@ def check_puzzle_progress():
     ##### Request for the hint text to be verbalised (Text-to-Speech pipeline)
     try:
         url = 'http://localhost:5005/verbal_hint'
-        data = {'responseText': response_llm, 'counter': 0}
+        data = {'responseText': response_llm, 'counter': 0, 'hint_level': hint_level, 'hint_id': hint_id}
         response = requests.post(url, data=data)
         print("response from verbal_hint:: ", response)
     except Exception as e:
@@ -222,13 +222,14 @@ def verbalise_hint():
     hint = json.loads(request.form.get('hint'))
     try:
         url = 'http://localhost:5005/verbal_hint'
-        data = {'responseText': hint['hint'], 'counter': 0}
+        data = {'responseText': hint['hint'], 'counter': 0, 'hint_level': hint['hint_level'], 'hint_id': "untailored_"+hint['level']}
         response = requests.post(url, data=data)
         # print("response from verbal_hint:: ", response)
         return "Hint successfully verbalised!"
     except Exception as e:
         print("error in /verbalise_hint connecting to /verbal_hint:: ", e)
-        return "Error in /verbalise_hint connecting to /verbal_hint: " + e
+    
+    return hint['hint']
         
 @app.route('/clear_history')
 def clear_history():

@@ -3,7 +3,9 @@ from flask_cors import CORS
 from threading import Lock
 from pipeline import speech_pipeline, verbalise_hint
 import time
+from datetime import datetime
 import os
+from data_collection import csv_handler_audio
 
 app = Flask(__name__)
 # add cors support
@@ -65,15 +67,24 @@ def ai_hint():
             pre_text = ""#"Hi! Here is a hint: "
             response_text = request.form['responseText']
             counter = request.form['counter']
+            hint_level = request.form['hint_level']
+            hint_id = request.form['hint_id']
             print(counter, pre_text + response_text)
             
             # text to speech
-            file_path = './speech_pipeline/conversation/' + response_text + '.mp3'
+            file_path = './speech_pipeline/conversation/' + counter + '.mp3'
             audio_duration = verbalise_hint(pre_text + response_text, counter)
             end_time = time.time()
-            # time lapse also contains the time taken to play the audio file        
-            print("/verbal_hint :: Time taken: ", end_time-start_time-audio_duration, "; audio duration to play out loud: ", audio_duration)  
-            #TODO: to be saved in a csv file alongside audio duration and response duration and level
+            # time lapse also contains the time taken to play the audio file     
+            gen_time_taken = end_time-start_time-audio_duration   
+            print("/verbal_hint :: Time taken: ", gen_time_taken, "; audio duration to play out loud: ", audio_duration)  
+
+            # save the audio file data to the csv file
+            try:
+                id = csv_handler_audio.get_length() + 1
+                csv_handler_audio.add_entry({'id': id, 'Hint_Id': hint_id, 'Hint_Level': hint_level,'Hint': response_text, 'Audio_Generation_Latency': gen_time_taken, 'Audio_Playback_Latency': audio_duration, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+            except Exception as e:
+                print(f"Error writing to csv: {str(e)}")
             
             return 'File successfully received and processed! on file: ' + file_path
         
