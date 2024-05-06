@@ -154,7 +154,7 @@ def check_puzzle_progress():
     track_hint_level(username=username, level=level, progressGrid=cellStates, solutionGrid=solutionCellStates, hint_id=hint_id)
     print("user_level_progress:: ", user_level_progress)
     hint_level = user_level_progress[username][level]["hint_level"]
-    # hint_level = 2 # for testing
+    # hint_level = 1 # for testing
     
     if hint_level > 0 and not completed:
         ##### Fetch the last interactions

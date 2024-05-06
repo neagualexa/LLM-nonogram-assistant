@@ -190,7 +190,7 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMea
             
             try:
                 ############ Save CSV entry
-                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
+                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': overall_area, 'Positioning_Response': last_location}
                 csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
             except Exception as e:
                 print("Error in saving CSV entry:: ", e) 
