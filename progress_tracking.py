@@ -62,7 +62,7 @@ def track_user_level_progress(username, level, progress):
     # always update the progress of the user
     user_level_progress[username][level] = (user_level_progress[username][level][1], progress)
         
-def define_hint_level(username, level, hint_level_duration=2):
+def define_hint_level(username, level, hint_level_duration=1):
     """
     Define the level of the hint based on the progress of the user over time. 
     Move through the hint levels based on the progress of the user over time (e.g. at the beginning; close to end game).
@@ -84,10 +84,9 @@ def define_hint_level(username, level, hint_level_duration=2):
         # if the user has completed the level, provide meaning hints
         user_level_progress[username]["hint_level"] = 7
         return
-    elif user_level_progress[username][level][1] > 0.7:
-        # if user returns to the level after a long time, provide directional hints from the start
-        user_level_progress[username]["hint_level"] = 1
-        return
+    elif user_level_progress[username][level][1] > 0.5:
+        # if user returns to the level after a long time, skip wait loop, provide directional & conclusive hints from the start
+        user_level_progress[username]["hint_session_counter"] = hint_level_duration
     
     if user_level_progress[username]["hint_session_counter"] < hint_level_duration:
         # if the user is still in the same hint level session, provide hints of the same level until the session is over
@@ -106,7 +105,7 @@ def define_hint_level(username, level, hint_level_duration=2):
             user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 2 else 2
     else:
         # if user is making progress
-        if user_level_progress[username][level][1]  > 0.7:
+        if user_level_progress[username][level][1]  > 0.5:
             # towards the end of the game, prioritise directional & conclusive hints
             user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 1 else 1
         else:

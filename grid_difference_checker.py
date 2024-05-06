@@ -172,9 +172,21 @@ def describe_point_position(position, width, height):
 
     # Rows and columns
     if row == half_height or row == half_height+index_offset_row:
-        description.append("middle rows")
+        # description.append("middle rows")
+        if col < half_width:
+            description.append("middle left columns")
+        elif col > half_width+index_offset_col:
+            description.append("middle right columns")
+        else:
+            description.append("middle area")
     if col == half_width or col == half_width+index_offset_col:
-        description.append("middle columns")
+        # description.append("middle columns")
+        if row < half_height:
+            description.append("middle top rows")
+        elif row > half_height+index_offset_row:
+            description.append("middle bottom rows")
+        else:
+            description.append("middle area")
 
     # Random choice from the collected descriptions
     return random.choice(description)
@@ -237,10 +249,6 @@ def decide_overall_area(locations_next_steps):
             area_components = (area_components[0], (area,1), area_components[2])
         elif area in ("edge", "corner", "quadrant", "rows", "columns") and area_components[2][1] == 0:            # add onto until ending words are found
             area_components = (area_components[0], area_components[1], (area,1))
-        
-        # if area_components[2][1]:
-        #     print("breaking")
-        #     break
     
     majority_area = " ".join([component[0] for component in area_components])
     

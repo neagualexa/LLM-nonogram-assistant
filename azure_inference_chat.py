@@ -178,7 +178,7 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMea
             print("overall_area:: ", overall_area)
             # 3. Generate a hint based on the area to focus on 
             system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
-            user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle."
+            user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle. Forget about the previous location and overall area from previous hints."
             
             # return "test"
             response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=past_messages)
@@ -222,7 +222,7 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
             response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
             print("callLLM_conclusive_hint:: response:: ", response)
             
-            # if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
             response = response.split('\n')[0].strip()                          # remove ending whitespace
             response = remove_after_last_punctuation(response)                  # remove unfinished sentences
             
