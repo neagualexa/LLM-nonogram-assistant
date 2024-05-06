@@ -148,10 +148,10 @@ def check_puzzle_progress():
     levelMeaning = puzzle_progress['levelMeaning']
     username = puzzle_progress['username']
     level = puzzle_progress['level']
-    hint_id = puzzle_progress['hint_id']
+    hint_id = puzzle_progress['hint_id'] + "_" + level
 
     ##### Track the hint level per user per level
-    track_hint_level(username=username, level=level, progressGrid=cellStates, solutionGrid=solutionCellStates)
+    track_hint_level(username=username, level=level, progressGrid=cellStates, solutionGrid=solutionCellStates, hint_id=hint_id)
     print("user_level_progress:: ", user_level_progress)
     hint_level = user_level_progress[username][level]["hint_level"]
     # hint_level = 2 # for testing

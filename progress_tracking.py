@@ -6,7 +6,7 @@ interaction_counter = 0
 levels_order = ["heart", "car", "toucan", "boat", "clock", "fish", "invertedcar"]
 hint_level_duration = 1
 
-def track_hint_level(username, level, progressGrid, solutionGrid):
+def track_hint_level(username, level, progressGrid, solutionGrid, hint_id):
     """
     Track the hint level of the user based on the progress of the user for a specific level.
     Define the hint level based on the progress of the user over time.
@@ -14,7 +14,7 @@ def track_hint_level(username, level, progressGrid, solutionGrid):
     # calculate progress of user and update the hint level accordingly
     progress = calculate_progress(progressGrid=progressGrid, solutionGrid=solutionGrid)
     track_user_level_progress(username, level, progress, hint_level_duration)
-    define_hint_level(username, level, hint_level_duration)
+    define_hint_level(username, level, hint_level_duration, hint_id)
 
 def calculate_progress(progressGrid, solutionGrid):
     """
@@ -62,7 +62,7 @@ def track_user_level_progress(username, level, progress, hint_level_duration):
     # always update the progress of the user
     user_level_progress[username][level]["progress"] = (user_level_progress[username][level]["progress"][1], progress)
         
-def define_hint_level(username, level, hint_level_duration):
+def define_hint_level(username, level, hint_level_duration, hint_id):
     """
     Define the level of the hint based on the progress of the user over time. 
     Move through the hint levels based on the progress of the user over time (e.g. at the beginning; close to end game).
@@ -83,6 +83,18 @@ def define_hint_level(username, level, hint_level_duration):
     prev_progress = user_level_progress[username][level]["progress"][0]
     hint_level = user_level_progress[username][level]["hint_level"]
     
+    # player requesting their first hint and allow for first waiting loop
+    if '1' in hint_id:
+        if level in levels_order[:3]:
+            """Start with General Hints for levels 1-3"""
+            hint_level = 0      
+        else:
+            """Start with Directional Hints for levels 4-7"""
+            hint_level = 1
+        user_level_progress[username][level]["hint_level"] = hint_level
+        user_level_progress[username][level]["hint_session_counter"] = 0
+        return
+    
     if curr_progress == 1:
         # if the user has completed the level, provide meaning hints
         user_level_progress[username][level]["hint_level"] = 7
@@ -91,7 +103,7 @@ def define_hint_level(username, level, hint_level_duration):
         # if user returns to the level after a long time, skip wait loop, provide directional & conclusive hints from the start
         user_level_progress[username][level]["hint_session_counter"] = hint_level_duration
     
-    ####### LOOP to wait for hint_level_duration interactions before changing hint level #######
+    ####### WAITING LOOP to wait for hint_level_duration interactions before changing hint level #######
     if user_level_progress[username][level]["hint_session_counter"] < hint_level_duration:
         # if the user is still in the same hint level session, provide hints of the same level until the session is over
         user_level_progress[username][level]["hint_session_counter"] += 1
@@ -104,12 +116,6 @@ def define_hint_level(username, level, hint_level_duration):
     if progress_differece <= 0:
         # if user is stuck at the same progress level (stagnant or negative progress)
         if curr_progress < 0.3:
-            if level in levels_order[:3]:
-                """Start with General Hints for levels 1-3"""
-                hint_level = 0      # TODO: this is still broken, only needed for initial when starting the level the first time
-            else:
-                """Start with Directional Hints for levels 4-7"""
-                hint_level = 1
             # at the beginning of the game, prioritise general game rule & directional hints
             user_level_progress[username][level]["hint_level"] = hint_level + 1 if hint_level < 1 else 1
         else:
