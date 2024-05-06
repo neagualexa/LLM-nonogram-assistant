@@ -3,6 +3,8 @@ from grid_difference_checker import zeroToOneIndexed, compare_grids
 
 user_level_progress = {}
 interaction_counter = 0
+levels_order = ["heart", "car", "toucan", "boat", "clock", "fish", "invertedcar"]
+hint_level_duration = 1
 
 def track_hint_level(username, level, progressGrid, solutionGrid):
     """
@@ -11,8 +13,8 @@ def track_hint_level(username, level, progressGrid, solutionGrid):
     """
     # calculate progress of user and update the hint level accordingly
     progress = calculate_progress(progressGrid=progressGrid, solutionGrid=solutionGrid)
-    track_user_level_progress(username, level, progress)
-    define_hint_level(username, level)
+    track_user_level_progress(username, level, progress, hint_level_duration)
+    define_hint_level(username, level, hint_level_duration)
 
 def calculate_progress(progressGrid, solutionGrid):
     """
@@ -44,7 +46,7 @@ def calculate_progress(progressGrid, solutionGrid):
 
     return progress
 
-def track_user_level_progress(username, level, progress):
+def track_user_level_progress(username, level, progress, hint_level_duration):
     """
     Track the progress of the user for a specific level.
     user_level_progress = {username: {  level: (previous progress, progress), 
@@ -53,16 +55,16 @@ def track_user_level_progress(username, level, progress):
                             }}
     """
     if username not in user_level_progress:
-        user_level_progress[username] = {level: (0, progress), "hint_level": 0, "hint_session_counter": 0}      # (previous progress, progress)
+        user_level_progress[username] = {level: (0, progress), "hint_level": 0, "hint_session_counter": hint_level_duration}      # (previous progress, progress)
     elif level not in user_level_progress[username]:
         user_level_progress[username][level] = (0,0)                                                            # (previous progress, progress)
         user_level_progress[username]["hint_level"] = 0
-        user_level_progress[username]["hint_session_counter"] = 0
+        user_level_progress[username]["hint_session_counter"] = hint_level_duration
     
     # always update the progress of the user
     user_level_progress[username][level] = (user_level_progress[username][level][1], progress)
         
-def define_hint_level(username, level, hint_level_duration=1):
+def define_hint_level(username, level, hint_level_duration):
     """
     Define the level of the hint based on the progress of the user over time. 
     Move through the hint levels based on the progress of the user over time (e.g. at the beginning; close to end game).
@@ -88,6 +90,7 @@ def define_hint_level(username, level, hint_level_duration=1):
         # if user returns to the level after a long time, skip wait loop, provide directional & conclusive hints from the start
         user_level_progress[username]["hint_session_counter"] = hint_level_duration
     
+    ####### LOOP to wait for hint_level_duration interactions before changing hint level #######
     if user_level_progress[username]["hint_session_counter"] < hint_level_duration:
         # if the user is still in the same hint level session, provide hints of the same level until the session is over
         user_level_progress[username]["hint_session_counter"] += 1
@@ -96,9 +99,16 @@ def define_hint_level(username, level, hint_level_duration=1):
     user_level_progress[username]["hint_session_counter"] = 0
     progress_differece = user_level_progress[username][level][1] - user_level_progress[username][level][0]  # current progress - previous progress
     
+    ####### Define the hint level based on the progress of the user over time #######
     if progress_differece <= 0:
         # if user is stuck at the same progress level (stagnant or negative progress)
         if user_level_progress[username][level][1] < 0.3:
+            if level in levels_order[:3]:
+                """Start with General Hints for levels 1-3"""
+                user_level_progress[username]["hint_level"] = 0
+            else:
+                """Start with Directional Hints for levels 4-7"""
+                user_level_progress[username]["hint_level"] = 1
             # at the beginning of the game, prioritise general game rule & directional hints
             user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 1 else 1
         else:
@@ -109,7 +119,11 @@ def define_hint_level(username, level, hint_level_duration=1):
             # towards the end of the game, prioritise directional & conclusive hints
             user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 1 else 1
         else:
-            user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 0 else 0
+            if level in levels_order[:3]:
+                print("General Hints for levels 1-3")
+                user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] - 1 if user_level_progress[username]["hint_level"] > 0 else 0
+            else:
+                user_level_progress[username]["hint_level"] = user_level_progress[username]["hint_level"] + 1 if user_level_progress[username]["hint_level"] < 1 else 1
 
 def recommend_next_steps(no_next_steps, progressGrid, solutionGrid, last_interactions, row_clues, column_clues):
     """
