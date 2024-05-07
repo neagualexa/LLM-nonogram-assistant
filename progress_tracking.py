@@ -84,7 +84,7 @@ def define_hint_level(username, level, hint_level_duration, hint_id):
     hint_level = user_level_progress[username][level]["hint_level"]
     
     # player requesting their first hint and allow for first waiting loop
-    if '1' in hint_id:
+    if hint_id[:2] == "1_":
         if level in levels_order[:3]:
             """Start with General Hints for levels 1-3"""
             hint_level = 0      

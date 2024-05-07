@@ -159,6 +159,7 @@ def check_puzzle_progress():
     if hint_level > 0 and not completed:
         ##### Fetch the last interactions
         if len(csv_handler_interaction.read_entries()) == 0:
+            """If user has not interacted with the puzzle yet, set hint level to 0 and no recommended steps."""
             hint_level = 0
             next_recommended_steps = []
         else:
