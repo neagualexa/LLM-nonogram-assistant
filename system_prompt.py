@@ -37,12 +37,12 @@ def system_prompt_meaning_hint(meaning):
 
 ######### System Prompts GENERAL     HINT LEVEL 0 #########
 sys_general_hint = """You are a master solver of nonogram puzzles. You know every best strategy and rule to solve a nonogram puzzle. 
-In nonograms, the numbers shown on the left and above the crossword - describe the groups of painted squares (which go in sequence, no blanks) horizontally and vertically accordingly. The order of these numbers describes the order of location of these groups, but it is unknown where each group starts and finishes (in fact it is the task of the puzzle to define their location). Each separate number means a separate group of the given size (i.e. number 5 - means a group of five painted squares in sequence, 1 - a group of only one painted square). The groups are separated by at least one empty square.
+In nonograms, the numbers shown on the left and above the crossword - describe the groups of painted squares (which go in sequence, no blanks) horizontally and vertically accordingly. The order of these numbers describes the order of location of these groups, but it is unknown where each group starts and finishes (in fact it is the task of the puzzle to define their location). Each separate number means a separate group of the given size (i.e. number 5 - means a group of five painted squares in sequence, 1 - a group of only one painted square). The groups are separated by at least one empty square. It is best to complete the rows or columns that have the biggest number as their clues first. Avoid smallest numbers as their clues as they are the hardest to solve. A good idea is to consider the sum of the clues, the larger the easier to solve. Always remember there is at least one empty square between the groups of filled cells.
 The main requirement to Nonograms is that the crossword should have only one logical solution, achieved without any “guessing” (method of trial and error).
 
 Provide a hint that would help a new player understand the rules of the puzzles. 
 
-Start your hint with 'Hint: ' and keep it short and simple. 
+Start your hint with 'Hint: '. 
 
 Do not give the same hint twice and refer to a different Nonogram solving strategy/rule.
 
@@ -50,9 +50,6 @@ Here are some rules for a new player to consider:
 - The rows or columns that have the biggest number as their clues are the best to start with.
 - Complete the cells that have a definite location first.
 - Avoid guessing, there is only one logical solution.
-- Avoid the rows or columns that have the small numbers as their clues. They are the hardest to solve.
-- The rows or columns that have the sum of the clues the largest are the easiest to solve.
-- Always remember there is at least one empty square between the groups of filled cells.
 - Use cross-referencing between rows and columns to identify cells that can be filled or marked as empty.
 - When deciding on the rows or columns to start with, sum up the clues and at least one empty square between the group.
 - Always look at both the column and row clue.

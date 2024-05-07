@@ -162,6 +162,7 @@ def check_puzzle_progress():
             """If user has not interacted with the puzzle yet, set hint level to 0 and no recommended steps."""
             hint_level = 0
             next_recommended_steps = []
+            print("User has not interacted with the puzzle yet. hint_level::", hint_level)
         else:
             last_interactions_entry = csv_handler_interaction.read_entries()[-1]
             lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) if last_interactions_entry['Cell_1'] else None # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
@@ -182,7 +183,7 @@ def check_puzzle_progress():
         print("Error saving progress data:: ", e)
         
     ############################################## call LLM for response depending on the hint level
-    messages_cache = format_history(fetch_last_5_messages_cached(hint_level))
+    messages_cache = format_history(fetch_last_3_messages_cached(hint_level))
     # print("messages_cache:: ", messages_cache)
     response_llm = ""
     if hint_level == 0:
@@ -349,13 +350,13 @@ def fetch_last_message_cached():
     last_message = {'user_message': last_message[1], 'ai_message': last_message[2], "timestamp": last_message[3]}
     return last_message
 
-def fetch_last_5_messages_cached(hint_level):
+def fetch_last_3_messages_cached(hint_level):
     """
-    Fetch the last 5 messages from the database that have the same hint level.
+    Fetch the last 3 messages from the database that have the same hint level.
     """
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM messages WHERE hint_level = ? ORDER BY timestamp DESC LIMIT 5', (hint_level,))
+    cursor.execute('SELECT * FROM messages WHERE hint_level = ? ORDER BY timestamp DESC LIMIT 3', (hint_level,))
     messages = cursor.fetchall()
     conn.close()
     messages = [{'user_message': message[1], 'ai_message': message[2], "timestamp": message[3]} for message in messages]

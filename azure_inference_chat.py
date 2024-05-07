@@ -131,9 +131,9 @@ def callLLM_general_hint(hint_id, past_messages=[]):
     
     try:
         system_message_general_hint = system_prompt_general_hint()
-        user_message = "I am a beginner and need some help. Can you give me a NEW hint?"
+        user_message = "I am a beginner and need some help. Give me a different hint than before."
         
-        response, latency = callAzureLLM(user_message, system_message=system_message_general_hint, max_tokens=70, past_messages=past_messages)
+        response, latency = callAzureLLM(user_message, system_message=system_message_general_hint, max_tokens=50, past_messages=past_messages)
         print("callLLM_general_hint:: response:: ", response)
         
         if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
