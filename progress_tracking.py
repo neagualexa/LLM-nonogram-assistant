@@ -1,5 +1,5 @@
 from nonogram_solver import NonogramSolver
-from grid_difference_checker import zeroToOneIndexed, compare_grids
+from grid_functions import zeroToOneIndexed, compare_grids
 
 user_level_progress = {}
 interaction_counter = 0

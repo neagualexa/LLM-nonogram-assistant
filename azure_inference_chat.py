@@ -20,7 +20,7 @@ from system_prompt import (
     system_prompt_conclusive_hint,
     system_prompt_meaning_hint
 )
-from grid_difference_checker import (
+from grid_functions import (
     string_to_lists_grids, 
     compare_grids, 
     generate_mistake_markers, 

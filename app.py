@@ -21,7 +21,7 @@ from azure_inference_chat import (
 # from old.llm_chain_memory import callLLM                  # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from hf_inference import meaning_checker_hf                 # HF llm checking validity of user meaning
 from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
-from grid_difference_checker import count_consecutive_cells, zeroToOneIndexed
+from grid_functions import count_consecutive_cells, zeroToOneIndexed
 from progress_tracking import (
     recommend_next_steps,
     track_hint_level,
