@@ -354,7 +354,7 @@ def zeroToOneIndexed(cells):
     for i, cell in enumerate(cells):
         if not cell:                                            # check if cell is empty
             continue
-        if type(cell) == int:                                   # check if cell is a number
+        if type(cell) == int or cell == 0:                      # check if cell is a number
             cells[i] = cell+1                                   # convert to 1-indexed
         elif len(cell) == 2:
             cells[i] = (cell[0]+1, cell[1]+1)                   # convert to 1-indexed

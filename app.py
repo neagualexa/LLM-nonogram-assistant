@@ -178,7 +178,8 @@ def check_puzzle_progress():
             
             if hint_level == 1:
                 next_recommended_steps, no_next_steps, no_possible_combinations, line_index = recommend_next_linewide_move(progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
-                line_index_clue = line_index.split(" ")[0].lower() == "row" and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
+                line_index_clue = (line_index.split(" ")[0].lower() == "row") and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
+                print("line_index:: ", line_index, "line_index_clue:: ", line_index_clue)
             else:
                 next_recommended_steps, _ = recommend_next_steps(no_next_steps=5, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     

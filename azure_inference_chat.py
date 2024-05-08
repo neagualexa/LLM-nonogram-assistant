@@ -177,13 +177,13 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id,
             # # 2. Use the locations for each step and decide on overall area to focus on
             # overall_area = decide_overall_area(locations_next_steps)
             # print("overall_area:: ", overall_area)
-            # 3. Get line index for overall steps (either row or column)
+            # 1. Get line index for overall steps (either row or column)
             print("line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with no_next_steps (definite cells):: ", no_next_steps)
-            # 4. Get the respective clues for the line index
+            # 2. Get the respective clues for the line index
             print("line_index_clue:: ", line_index_clue)
             # 3. Generate a hint based on the area to focus on 
             system_message_conclusive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue)
-            user_message = "Give me a hint on what to do next."
+            user_message = "Give me a hint on what to do next. Forget about the previous information the last hint was based on."
             # system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
             # user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle. Forget about the previous location and overall area from previous hints."
             
@@ -197,7 +197,7 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id,
             
             try:
                 ############ Save CSV entry
-                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': overall_area, 'Positioning_Response': last_location}
+                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': line_index, 'Positioning_Response': last_location}
                 csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
             except Exception as e:
                 print("Error in saving CSV entry:: ", e) 
