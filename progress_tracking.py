@@ -141,11 +141,29 @@ def recommend_next_steps(no_next_steps, progressGrid, solutionGrid, last_interac
     prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in progressGrid]
     solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
     solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid, LAST_INTERACTIONS=last_interactions)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
-    next_recommended_steps = solver.recommend_next_action(no_next_steps=no_next_steps)
+    next_recommended_steps, _, _ = solver.recommend_next_action(no_next_steps=no_next_steps)
     next_recommended_steps = zeroToOneIndexed(next_recommended_steps)                           # convert to 1-indexed
     next_recommended_steps = [(step[0], step[1], ("filled" if step[2] == 1 else "empty"))  for step in next_recommended_steps]   # convert value from int to descriptive string
     
     return next_recommended_steps, solver.process_explained
+
+def recommend_next_linewide_move(progressGrid, solutionGrid, last_interactions, row_clues, column_clues):
+    """
+    Make a recommendation of a row or columns with definite cells based on the clues and progress grid.
+    This will be used to provide hints of level 1 to the user.
+    """
+    # replace all 0s with -1s for empty cells
+    prorgessGrid = [[-1 if cell == 0 else cell for cell in row] for row in progressGrid]
+    solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
+    solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=prorgessGrid, SOLUTION_GRID=solutionGrid, LAST_INTERACTIONS=last_interactions)#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
+    next_recommended_steps, no_possible_combinations, line_index = solver.recommend_next_action(whole_line=True)
+    next_recommended_steps = zeroToOneIndexed(next_recommended_steps)                           # convert to 1-indexed
+    next_recommended_steps = [(step[0], step[1], ("filled" if step[2] == 1 else "empty"))  for step in next_recommended_steps]   # convert value from int to descriptive string
+    line_1index = zeroToOneIndexed([line_index[1]])[0]                                          # convert to 1-indexed
+    line_index = line_index[0] + str(line_1index)                                               # convert to string (row or column)
+    no_next_steps = len(next_recommended_steps)
+    # Player can fill Row R in no_possible_combinations ways, by considering the clue on the row & all the possible combinations of the row they can deduce that only no_next_steps of them are definite
+    return next_recommended_steps, no_next_steps, no_possible_combinations, line_index
 
 def get_interaction_id():
     """

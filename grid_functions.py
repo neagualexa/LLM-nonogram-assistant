@@ -256,69 +256,10 @@ def decide_overall_area(locations_next_steps):
     
     return majority_area
 
-def describe_point_position_bottom_left(position, width, height):
-    """
-    Method to describe the position of a point in a grid, with the bottom left corner as the origin.
-    """
-    x, y = position
-    description = []
-    # 1-indexed
-    if x < 1 or x > width or y < 1 or y > height:
-        return "Point is outside of the grid."
-
-    # Define row subcases
-    if y >= height - 1:
-        row_desc = "top"                        # 10, 9
-    elif y >= height - 3:
-        row_desc = "middle top"                 # 8, 7
-    elif y >= height - 5: 
-        row_desc = "centre"                     # 6, 5
-    elif y >= 3:
-        row_desc = "middle bottom"              # 4, 3
-    else:
-        row_desc = "bottom"                     # 2, 1
-
-    # Define column subcases
-    if x >= width - 1:
-        col_desc = "right"
-    elif x >= width - 3:
-        col_desc = "middle right"
-    elif x >= width - 5:
-        col_desc = "centre"
-    elif x >= 4:
-        col_desc = "middle left"
-    else:
-        col_desc = "left"
-        
-    if row_desc == "centre" and col_desc == "centre":
-        return "centre"
-    if row_desc == "centre":
-        return col_desc
-    if col_desc == "centre":
-        return row_desc
-    
-    if "middle" in row_desc and "middle" in col_desc:
-        #remove middle from both
-        row_desc = row_desc.split(" ")[1]
-        col_desc = col_desc.split(" ")[1]
-        description.append( f"{row_desc} {col_desc}")
-    
-    if row_desc in ("middle top", "top") and col_desc in ("middle right", "right"):
-        description.append( "top right corner")
-    if row_desc in ("middle top", "top") and col_desc in ("middle left", "left"):
-        description.append( "top left corner")
-    if row_desc in ("middle bottom", "bottom") and col_desc in ("middle right", "right"):
-        description.append( "bottom right corner")
-    if row_desc in ("middle bottom", "bottom") and col_desc in ("middle left", "left"):
-        description.append( "bottom left corner")
-
-    description.append( f"{row_desc} rows, {col_desc} columns")
-    description.append( f"{row_desc}, {col_desc} side")
-    description.append( f"{row_desc}, {col_desc} area")
-    
-    return random.choice(description)
-
 def count_consecutive_cells(grid):
+    """
+    Count the number of consecutive filled cells in each row and column of the grid. Forming the row and column clues for the puzzle.
+    """
     row_counts = []
     col_counts = []
 
@@ -351,6 +292,60 @@ def count_consecutive_cells(grid):
 
     return row_counts, col_counts
 
+def get_cell_group_size(cell_states, row, column):
+    """
+    For a specific cell, find the size of the group of filled cells in the row and column it belongs to.
+    """
+    # Ensure dimensions
+    if not (0 <= row < len(cell_states) and 0 <= column < len(cell_states[0])):
+        raise IndexError("Row or column index is out of bounds.")
+    
+    row_group_size = find_group_size(cell_states, row, column, axis='row')
+    column_group_size = find_group_size(cell_states, row, column, axis='column')
+
+    return row_group_size, column_group_size
+
+
+def find_group_size(cell_states, row, column, axis):
+    """
+    Calculate the size of the group of filled cells that the current cell belongs to.
+    """
+    if not cell_states[row][column]:
+        return 0
+
+    current_group = 0
+    if axis == 'row':
+        # Check if current cell is contiguous with the left neighbor
+        if column > 0 and cell_states[row][column - 1]:
+            return find_group_size(cell_states, row, column - 1, axis='row')
+        
+        # Traverse left and right
+        col_copy = column
+        while col_copy >= 0 and cell_states[row][col_copy]:
+            current_group += 1
+            col_copy -= 1
+        col_copy = column + 1
+        while col_copy < len(cell_states[0]) and cell_states[row][col_copy]:
+            current_group += 1
+            col_copy += 1
+
+    elif axis == 'column':
+        # Check if current cell is contiguous with the upper neighbor
+        if row > 0 and cell_states[row - 1][column]:
+            return find_group_size(cell_states, row - 1, column, axis='column')
+        
+        # Traverse up and down
+        row_copy = row
+        while row_copy >= 0 and cell_states[row_copy][column]:
+            current_group += 1
+            row_copy -= 1
+        row_copy = row + 1
+        while row_copy < len(cell_states) and cell_states[row_copy][column]:
+            current_group += 1
+            row_copy += 1
+
+    # Remove the double-count of the initial cell
+    return current_group - 1
 
 def zeroToOneIndexed(cells):
     """
@@ -359,10 +354,76 @@ def zeroToOneIndexed(cells):
     for i, cell in enumerate(cells):
         if not cell:                                            # check if cell is empty
             continue
-        if len(cell) == 2:
+        if type(cell) == int:                                   # check if cell is a number
+            cells[i] = cell+1                                   # convert to 1-indexed
+        elif len(cell) == 2:
             cells[i] = (cell[0]+1, cell[1]+1)                   # convert to 1-indexed
         elif len(cell) == 3:
             cells[i] = (cell[0]+1, cell[1]+1, cell[2])          # convert to 1-indexed, keep the third element as state of cell
         elif len(cell) == 4:
             cells[i] = (cell[0]+1, cell[1]+1, cell[2], cell[3]) # convert to 1-indexed
     return cells
+
+
+#### OLD
+# def describe_point_position_bottom_left(position, width, height):
+#     """
+#     Method to describe the position of a point in a grid, with the bottom left corner as the origin.
+#     """
+#     x, y = position
+#     description = []
+#     # 1-indexed
+#     if x < 1 or x > width or y < 1 or y > height:
+#         return "Point is outside of the grid."
+
+#     # Define row subcases
+#     if y >= height - 1:
+#         row_desc = "top"                        # 10, 9
+#     elif y >= height - 3:
+#         row_desc = "middle top"                 # 8, 7
+#     elif y >= height - 5: 
+#         row_desc = "centre"                     # 6, 5
+#     elif y >= 3:
+#         row_desc = "middle bottom"              # 4, 3
+#     else:
+#         row_desc = "bottom"                     # 2, 1
+
+#     # Define column subcases
+#     if x >= width - 1:
+#         col_desc = "right"
+#     elif x >= width - 3:
+#         col_desc = "middle right"
+#     elif x >= width - 5:
+#         col_desc = "centre"
+#     elif x >= 4:
+#         col_desc = "middle left"
+#     else:
+#         col_desc = "left"
+        
+#     if row_desc == "centre" and col_desc == "centre":
+#         return "centre"
+#     if row_desc == "centre":
+#         return col_desc
+#     if col_desc == "centre":
+#         return row_desc
+    
+#     if "middle" in row_desc and "middle" in col_desc:
+#         #remove middle from both
+#         row_desc = row_desc.split(" ")[1]
+#         col_desc = col_desc.split(" ")[1]
+#         description.append( f"{row_desc} {col_desc}")
+    
+#     if row_desc in ("middle top", "top") and col_desc in ("middle right", "right"):
+#         description.append( "top right corner")
+#     if row_desc in ("middle top", "top") and col_desc in ("middle left", "left"):
+#         description.append( "top left corner")
+#     if row_desc in ("middle bottom", "bottom") and col_desc in ("middle right", "right"):
+#         description.append( "bottom right corner")
+#     if row_desc in ("middle bottom", "bottom") and col_desc in ("middle left", "left"):
+#         description.append( "bottom left corner")
+
+#     description.append( f"{row_desc} rows, {col_desc} columns")
+#     description.append( f"{row_desc}, {col_desc} side")
+#     description.append( f"{row_desc}, {col_desc} area")
+    
+#     return random.choice(description)

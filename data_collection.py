@@ -53,6 +53,15 @@ class CSVHandler:
                 entries.append(row)
         return entries
     
+    def read_entries_specific_level(self, level):
+        entries = []
+        with open(self.filename, 'r', newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['Level'] == level:
+                    entries.append(row)
+        return entries
+    
     def get_length(self):
         with open(self.filename, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile)

@@ -24,6 +24,7 @@ from data_collection import csv_handler_progress, csv_handler_meaning, csv_handl
 from grid_functions import count_consecutive_cells, zeroToOneIndexed
 from progress_tracking import (
     recommend_next_steps,
+    recommend_next_linewide_move,
     track_hint_level,
     user_level_progress,
     get_interaction_id, increment_interaction_counter
@@ -158,13 +159,14 @@ def check_puzzle_progress():
     
     if hint_level > 0 and not completed:
         ##### Fetch the last interactions
-        if len(csv_handler_interaction.read_entries()) == 0:
+        if len(csv_handler_interaction.read_entries_specific_level(level)) == 0:
             """If user has not interacted with the puzzle yet, set hint level to 0 and no recommended steps."""
             hint_level = 0
             next_recommended_steps = []
+            last_location = []
             print("User has not interacted with the puzzle yet. hint_level::", hint_level)
         else:
-            last_interactions_entry = csv_handler_interaction.read_entries()[-1]
+            last_interactions_entry = csv_handler_interaction.read_entries_specific_level(level)[-1]
             lastPressedCell_1 = ast.literal_eval(last_interactions_entry['Cell_1']) if last_interactions_entry['Cell_1'] else None # lsit of 4 elements (Row, Column, Row Group Size, Column Group Size)
             lastPressedCell_2 = ast.literal_eval(last_interactions_entry['Cell_2']) if last_interactions_entry['Cell_2'] else None
             lastPressedCell_3 = ast.literal_eval(last_interactions_entry['Cell_3']) if last_interactions_entry['Cell_3'] else None
@@ -173,7 +175,12 @@ def check_puzzle_progress():
             row_clues, column_clues = count_consecutive_cells(solutionCellStates)
             last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
             last_location = zeroToOneIndexed([lastPressedCell_1])
-            next_recommended_steps, _ = recommend_next_steps(no_next_steps=5, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+            
+            if hint_level == 1:
+                next_recommended_steps, no_next_steps, no_possible_combinations, line_index = recommend_next_linewide_move(progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+                line_index_clue = line_index.split(" ")[0].lower() == "row" and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
+            else:
+                next_recommended_steps, _ = recommend_next_steps(no_next_steps=5, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
     ##### Save the data to the CSV Progress database
     try:
@@ -186,12 +193,13 @@ def check_puzzle_progress():
     messages_cache = format_history(fetch_last_3_messages_cached(hint_level))
     # print("messages_cache:: ", messages_cache)
     response_llm = ""
+    print("hint_level:: ", hint_level)
     if hint_level == 0:
         """General rules hint"""
         response_llm = callLLM_general_hint(hint_id, messages_cache)
     elif hint_level == 1:
         """Directional hint"""
-        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, last_location, messages_cache)
+        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location, messages_cache)
     elif hint_level == 2:
         "Conclusive hint"
         response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)

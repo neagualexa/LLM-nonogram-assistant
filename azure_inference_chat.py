@@ -17,6 +17,7 @@ from system_prompt import (
 
     system_prompt_general_hint,
     system_prompt_directional_hint,
+    system_prompt_directional_hint_2,
     system_prompt_conclusive_hint,
     system_prompt_meaning_hint
 )
@@ -156,7 +157,7 @@ def callLLM_general_hint(hint_id, past_messages=[]):
 ################ Function call for progress feedback : """Directional hint"""    HINT LEVEL : 1 ################
 ################
 
-def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMeaning, hint_id, next_recommended_steps, last_location, past_messages=[]):
+def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location, past_messages=[]):
     """
     Function to call the Azure LLM for progress feedback with a directional hint.
     The directional aspect depends on the next few best steps it is predicted for the user to take in order to solve the puzzle.
@@ -170,19 +171,25 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMea
             height = len(cellStates)
             width = len(cellStates[0])
             
-            # 1. Get a natural language description of the locayions of the next recommended steps
-            locations_next_steps = [describe_point_position((step[0], step[1]), width, height) for step in next_recommended_steps]
-            print("locations_next_steps:: ", locations_next_steps)
-            # 2. Use the locations for each step and decide on overall area to focus on
-            overall_area = decide_overall_area(locations_next_steps)
-            print("overall_area:: ", overall_area)
+            # # 1. Get a natural language description of the locayions of the next recommended steps
+            # locations_next_steps = [describe_point_position((step[0], step[1]), width, height) for step in next_recommended_steps]
+            # print("locations_next_steps:: ", locations_next_steps)
+            # # 2. Use the locations for each step and decide on overall area to focus on
+            # overall_area = decide_overall_area(locations_next_steps)
+            # print("overall_area:: ", overall_area)
+            # 3. Get line index for overall steps (either row or column)
+            print("line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with no_next_steps (definite cells):: ", no_next_steps)
+            # 4. Get the respective clues for the line index
+            print("line_index_clue:: ", line_index_clue)
             # 3. Generate a hint based on the area to focus on 
-            system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
-            user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle. Forget about the previous location and overall area from previous hints."
+            system_message_conclusive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue)
+            user_message = "Give me a hint on what to do next."
+            # system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
+            # user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle. Forget about the previous location and overall area from previous hints."
             
             # return "test"
             response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=past_messages)
-            print("callLLM_conclusive_hint:: response:: ", response)
+            print("callLLM_directional_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
             response = response.split('\n')[0].strip()                          # remove ending whitespace
@@ -198,8 +205,8 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, levelMea
             return response
         
     except Exception as e:
-        print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
-        return "Error in callLLM_conclusive_hint:: " + str(e)
+        print("callLLM_directional_hint:: The request failed with status code: " + str(e))
+        return "Error in callLLM_directional_hint:: " + str(e)
 
 ################   
 ################ Function call for progress feedback : """Conclusive hint"""    HINT LEVEL : 2 ################

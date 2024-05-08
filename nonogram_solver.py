@@ -85,13 +85,15 @@ class NonogramSolver:
             self.check_solved()                                     # check if the puzzle is solved
         if self.solved: self.solution_grid = self.board.copy()      # set the solution grid to the board when the puzzle is solved
         
-    def recommend_next_action(self, no_next_steps = 1):
+    def recommend_next_action(self, no_next_steps = 1, whole_line=False):
         """
         Method that recommends the next cell to fill in the nonogram puzzle based on the current grid progress state.
         The method also considers the last interactions with the grid to prioritize the rows and columns that were last interacted with. (including the rows and columns right next to the last interacted row or column)
         Always look in the vicinity of the last interaction.
         
         Set no_next_steps to 100 to get all the recommended next steps for 10x10 nonogram puzzle.
+        
+        Set whole_line to True to return the recommended next steps (definite cells) that were possible to be filled in that row or column (the no of steps will differ based on the number of definite cells in that row or column at the given moment)
         """
         next_recommended_steps = []
         self.process_explained = [] # reset the process explained
@@ -123,11 +125,14 @@ class NonogramSolver:
             # step 5.1.1: First sort the rows and cols by the lowest number of possibilities
             self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
 
-            # step 5.1.2: Get the priority rows and columns based on the last interactions with the grid (also consider the rows and columns right next to the last interacted row or column)
-            self.priority_lines = self.get_priority_lines(self.last_interactions)       # priority used to sort the rows and columns in custom_sort_priority
-            self.process_explained.append("- user interacted last with: " + str(self.last_interactions) + "\n")
-            # Step 5.1.3: Then re-sort the combined list (of rows and columns) by priority of interaction
-            self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
+            # if self.last_interactions != []:
+            #     # step 5.1.2: Get the priority rows and columns based on the last interactions with the grid (also consider the rows and columns right next to the last interacted row or column)
+            #     self.priority_lines = self.get_priority_lines(self.last_interactions)       # priority used to sort the rows and columns in custom_sort_priority
+            #     self.process_explained.append("- user interacted last with: " + str(self.last_interactions) + "\n")
+            #     # Step 5.1.3: Then re-sort the combined list (of rows and columns) by priority of interaction
+            #     self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
+            # else:
+            self.priority_lowest = self.lowest
 
             # step 5.2: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
             for ind1, _, row_ind in self.priority_lowest:
@@ -137,7 +142,7 @@ class NonogramSolver:
                     # If the row or column is not done yet, get the possibilities for the row or column
                     if row_ind: values = self.rows_possibilities[ind1]
                     else:       values = self.cols_possibilities[ind1]
-                    # Then identifiy which cells in a set of possiblities of row/column patterns have a consistent value across all possibilities, and return those cells.
+                    # Then identifiy which cells in a set of possiblities of row/column patterns have a consistent value across all possibilities, and return those cells. (DEFINITE CELLS)
                     same_ind = self.get_only_one_option(values)
                     self.process_explained.append(f"-- \tget the cells that have only one possible value across all possibilities in the {'row' if row_ind else 'column'} {ind1}: ({'column' if row_ind else 'row'}, value) {same_ind}.")
                     
@@ -154,23 +159,28 @@ class NonogramSolver:
                                 # print(f'Recommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]')
                                 if no_next_steps > 0:
                                     next_recommended_steps.append((ri, ci, val))
-                                    no_next_steps -= 1
+                                    if not whole_line: no_next_steps -= 1
                                 
-                                if no_next_steps == 0:
-                                    return next_recommended_steps
+                                if no_next_steps == 0 and not whole_line:
+                                    return next_recommended_steps, _, _
                                 
                             self.board[ri][ci] = val
                             # If loop not broken, then a cell was completed in that row/column, so remove the other possibilities that do not match that specific cell's state at its supposed location
                             if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
                             else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
                             self.process_explained.append(f"--- \tRemove the possibilities that do not match the value of the cell at the given location (row: {ri}, col: {ci}, val: {val})(remove impossible solutions for other rows or columns).")
+                    
+                    # if whole_line is set to true, then return the recommended next steps (definite cells) that were possible to be filled in that row or column & the number of combinations of completions for that row or column
+                    line_index = ("Row ",ind1) if row_ind else ("Column ",ind1)
+                    # print("Possible combinations of completions for the", line_index, ":", (values))
+                    if whole_line and len(next_recommended_steps) != 0: return next_recommended_steps, len(values), line_index                      # do not return the next steps for a completed line (e.g. next_recommended_steps = [])
                     # A new row/column has been fully completed, so mark them as done
                     self.update_done(row_ind, ind1)
                     self.process_explained.append(f"-- \tUpdate that {'row' if row_ind else 'column' } {ind1} is completed with all cells.\n")
             # check if nonogram grid is completed
             self.check_solved()
             self.process_explained.append(f"\n-- \tCheck if the nonogram puzzle is solved. {self.solved}")
-        return next_recommended_steps # No recommended next step as the grid is solved
+        return next_recommended_steps, _, _ # No recommended next step as the grid is solved
     
     def nullify_mistakes(self, progress_grid, solution_grid):
         """
@@ -335,6 +345,7 @@ class NonogramSolver:
         """
         if row_ind: vals = self.board[idx]
         else: vals = [row[idx] for row in self.board]
+        # if no null cells in the row or column, then the row or column is done
         if 0 not in vals:
             if row_ind: self.rows_done[idx] = 1
             else: self.cols_done[idx] = 1 
@@ -528,7 +539,7 @@ class NonogramSolver:
         """
         # if a mistake was made, get the recommended next steps
         bot_helper = NonogramSolver(ROWS_VALUES=self.ROWS_VALUES,COLS_VALUES=self.COLS_VALUES, PROGRESS_GRID=self.board, SOLUTION_GRID=self.solution_grid, LAST_INTERACTIONS=self.last_interactions)
-        next_recommended_steps = bot_helper.recommend_next_action(no_next_steps=1)
+        next_recommended_steps, _, _ = bot_helper.recommend_next_action(no_next_steps=1)
         print(f"next_recommended_steps: {next_recommended_steps}")
         if next_recommended_steps == []: self.solved = True
         elif np.random.rand() < prob_respect_recommendation:
