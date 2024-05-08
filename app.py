@@ -14,6 +14,7 @@ from azure_inference_chat import (
     callLLM_progress_checker,
     callLLM_general_hint,
     callLLM_directional_hint,
+    callLLM_descriptive_hint,
     callLLM_conclusive_hint,
     callLLM_meaning_hint
 )                
@@ -25,9 +26,11 @@ from grid_functions import count_consecutive_cells, zeroToOneIndexed
 from progress_tracking import (
     recommend_next_steps,
     recommend_next_linewide_move,
+    recommend_one_of_all_linewide_moves,
     track_hint_level,
     user_level_progress,
-    get_interaction_id, increment_interaction_counter
+    get_interaction_id, 
+    increment_interaction_counter
 )
 
 app = Flask(__name__)
@@ -222,7 +225,83 @@ def check_puzzle_progress():
         message = f"Progress feedback HINT LEVEL {hint_level}"
         insert_new_message_cache(message, response_llm, hint_level)
         
-    # redirect('/')
+    return response_llm
+
+@app.route('/ask_untailored_hint', methods=['POST'])
+def untailored_hint():
+    """
+    Route called by Unity to generate an untailored hint for the user based on their % progress in the puzzle.
+    
+    Based on the calculated progress difference, the hint level is updated as follows:
+    - If the user is stuck at the same progress level (stagnant or negative progress), the hint level is increased.
+    - If the user is making progress, the hint level is decreased.
+    
+    Hint levels hierarchy:
+    0: general game rule hints  (return a general strategy or rule)
+    1: descriptive hints        (return a row or column or area)
+    7: meaning hints            (return a riddle about what the grid represents)
+    
+    """
+    puzzle_progress = request.form.get('puzzleProgress')
+    puzzle_progress = json.loads(puzzle_progress)
+    solutionCellStates = puzzle_progress['solutionCellStates']
+    solutionCellStates = ast.literal_eval(solutionCellStates)
+    completed = True if puzzle_progress['completed'].lower() == "true" else False # convert to boolean
+    levelMeaning = puzzle_progress['levelMeaning']
+    username = puzzle_progress['username']
+    level = puzzle_progress['level']
+    hint_id = "untailored_"+puzzle_progress['hint_id'] + "_" + level
+    hint_level = int(puzzle_progress['hint_level'])
+    
+    if hint_level == 1 and not completed:
+        # Descriptive steps from solving the puzzle
+        row_clues, column_clues = count_consecutive_cells(solutionCellStates)
+        
+        # TODO: decide on how: idea make the solver complete the puzzle level and save every step per row/column (and form hints at random based on those infos), similar to recommend_next_linewide_move, but in original solver
+        next_recommended_steps, no_next_steps, no_possible_combinations, line_index = recommend_one_of_all_linewide_moves(solutionGrid=solutionCellStates, row_clues=row_clues, column_clues=column_clues)
+        # check if on same level as before, then choose a hint at random out of the ones done by the solver, else if new level, run the solver to get all the hints
+        line_index_clue = (line_index.split(" ")[0].lower() == "row") and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
+        print("UNTAILORED line_index:: ", line_index, "line_index_clue:: ", line_index_clue)
+        
+    ##### Save the data to the CSV Progress database
+    try:
+        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': "-", 'Hint_Response': "-", 'Observation_Response': "-", 'Positioning_Response': "-", 'Position_Description': "-", 'Overall_Latency': "-", 'Hint_Latency': "-", 'Observation_Latency': "-", 'Position_Latency': "-", 'Hint_Model': "-", 'Observation_Model': "-", 'Position_Model': "-", 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        csv_handler_progress.add_entry(new_entry)
+    except Exception as e:
+        print("UNTAILORED Error saving progress data:: ", e)
+        
+    ############################################## call LLM for response depending on the hint level
+    messages_cache = format_history(fetch_last_3_messages_cached(hint_level))
+    # print("messages_cache:: ", messages_cache)
+    response_llm = ""
+    print("UNTAILORED hint_level:: ", hint_level)
+    if hint_level == 0:
+        """General rules hint"""
+        print("UNTAILORED General rules hint")
+        response_llm = callLLM_general_hint(hint_id, messages_cache)
+    elif hint_level == 1:
+        """Directional hint"""
+        print("UNTAILORED Directional hint")
+        response_llm = callLLM_descriptive_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, messages_cache)
+    elif hint_level == 7:
+        """Meaning hint"""
+        print("UNTAILORED Meaning hint")
+        response_llm = callLLM_meaning_hint(completed, levelMeaning, hint_id, messages_cache)
+    ##### Request for the hint text to be verbalised (Text-to-Speech pipeline)
+    try:
+        url = 'http://localhost:5005/verbal_hint'
+        data = {'responseText': response_llm, 'counter': 0, 'hint_level': hint_level, 'hint_id': hint_id}
+        response = requests.post(url, data=data)
+        print("UNTAILORED response from verbal_hint:: ", response)
+    except Exception as e:
+        print("UNTAILORED error in /untailored_hint connecting to /verbal_hint:: ", e)
+    ############################################## 
+
+    if response_llm != "":
+        # Save conversation to the database
+        message = f"UNTAILORED feedback HINT LEVEL {hint_level}"
+        insert_new_message_cache(message, response_llm, hint_level)
+        
     return response_llm
 
 @app.route('/verbalise_hint', methods=['POST'])

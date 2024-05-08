@@ -165,6 +165,28 @@ def recommend_next_linewide_move(progressGrid, solutionGrid, last_interactions, 
     # Player can fill Row R in no_possible_combinations ways, by considering the clue on the row & all the possible combinations of the row they can deduce that only no_next_steps of them are definite
     return next_recommended_steps, no_next_steps, no_possible_combinations, line_index
 
+def recommend_one_of_all_linewide_moves(solutionGrid, row_clues, column_clues):
+    """
+    Make a recommendation of a row or columns with definite cells based on the clues and progress grid.
+    This will be used to provide hints of level 1 to the user.
+    """
+    # replace all 0s with -1s for empty cells
+    # start from empty progress grid
+    initialGrid = [[0 for _ in range(len(column_clues))] for _ in range(len(row_clues))]
+    solutionGrid = [[-1 if cell == 0 else cell for cell in row] for row in solutionGrid]
+    solver = NonogramSolver(ROWS_VALUES=row_clues,COLS_VALUES=column_clues, PROGRESS_GRID=initialGrid, SOLUTION_GRID=solutionGrid, LAST_INTERACTIONS=[])#, savepath='data/nonogram_solver') # add a savepath to save the board at each iteration
+    
+    # TODO: adapt the solve function to save all the next_action on whole_line it does
+    next_recommended_steps, no_possible_combinations, line_index = solver.recommend_next_action(whole_line=True)
+    
+    next_recommended_steps = zeroToOneIndexed(next_recommended_steps)                           # convert to 1-indexed
+    next_recommended_steps = [(step[0], step[1], ("filled" if step[2] == 1 else "empty"))  for step in next_recommended_steps]   # convert value from int to descriptive string
+    line_1index = zeroToOneIndexed([line_index[1]])[0]                                          # convert to 1-indexed
+    line_index = line_index[0] + str(line_1index)                                               # convert to string (row or column)
+    no_next_steps = len(next_recommended_steps)
+    # Player can fill Row R in no_possible_combinations ways, by considering the clue on the row & all the possible combinations of the row they can deduce that only no_next_steps of them are definite
+    return next_recommended_steps, no_next_steps, no_possible_combinations, line_index
+
 def get_interaction_id():
     """
     Get the unique identifier for the interaction.

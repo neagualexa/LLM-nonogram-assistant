@@ -27,7 +27,8 @@ def system_prompt_general_hint():
     return sys_general_hint
 
 def system_prompt_directional_hint(next_steps, height, width, overall_area, last_location):
-    return sys_directional_hint.format(next_steps=next_steps, overall_area=overall_area, height=height, width=width, last_location=last_location)
+    # return sys_directional_hint.format(next_steps=next_steps, overall_area=overall_area, height=height, width=width, last_location=last_location)
+    return ""
 
 def system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, clues):
     return sys_directional_hint_2.format(height=height, width=width, line_index=line_index, no_possible_combinations=no_possible_combinations, no_next_steps=no_next_steps, clues=clues)

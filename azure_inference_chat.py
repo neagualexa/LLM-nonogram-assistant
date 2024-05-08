@@ -245,6 +245,51 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
     except Exception as e:
         print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
         return "Error in callLLM_conclusive_hint:: " + str(e)
+    
+################
+################ Function call for UNTAILORED feedback : """Descriptive hint"""    HINT LEVEL : 1 ################
+################
+
+def callLLM_descriptive_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, past_messages=[]):
+    """
+    Function to call the Azure LLM for untailored feedback with a level descriptive hint.
+    """
+    try:
+        print("Entering callLLM_descriptive_hint:: next_recommended_steps:: ", next_recommended_steps)
+        if completed:
+            return "The puzzle is already completed. No further steps needed."
+        else:
+            height = len(solutionCellStates)
+            width = len(solutionCellStates[0])
+            
+            # 1. Get line index for overall steps (either row or column)
+            print("UNTAILORED line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with no_next_steps (definite cells):: ", no_next_steps)
+            # 2. Get the respective clues for the line index
+            print("UNTAILORED line_index_clue:: ", line_index_clue)
+            # 3. Generate a hint based on the area to focus on (SAME PROMPT AS DIRECTIONAL HINT)
+            system_message_conclusive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue)
+            user_message = "Give me a hint on a possible good step take to complete the Nonogram. Forget about the previous information the last hint was based on."
+
+            # return "test"
+            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=past_messages)
+            print("UNTAILORED callLLM_descriptive_hint:: response:: ", response)
+            
+            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
+            response = response.split('\n')[0].strip()                          # remove ending whitespace
+            response = remove_after_last_punctuation(response)                  # remove unfinished sentences
+            
+            try:
+                ############ Save CSV entry
+                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': line_index}
+                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
+            except Exception as e:
+                print("UNTAILORED Error in saving CSV entry:: ", e) 
+            
+            return response
+        
+    except Exception as e:
+        print("callLLM_descriptive_hint:: The request failed with status code: " + str(e))
+        return "Error in callLLM_descriptive_hint:: " + str(e)
 
 ################
 ################ Function call for progress feedback : """Meaning hint"""    HINT LEVEL : 7 ################
