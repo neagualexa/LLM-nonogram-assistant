@@ -272,9 +272,14 @@ def callLLM_descriptive_hint(solutionCellStates, completed, hint_id, next_recomm
             print("UNTAILORED line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with no_next_steps (definite cells):: ", no_next_steps)
             # 2. Get the respective clues for the line index
             print("UNTAILORED line_index_clue:: ", line_index_clue)
-            # 3. Generate a hint based on the area to focus on (SAME PROMPT AS DIRECTIONAL HINT)
-            system_message_descriptive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue)
-            user_message = "Give me a hint on a possible good step take to complete the Nonogram. Forget about the previous information the last hint was based on."
+            # 3. Get the group size that the next steps are part of (choose the first next step as representative); find the group size of the row or column in solution
+            row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
+            focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
+            print("UNTAILORED focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
+            # 4. Generate a hint based on the area to focus on 
+            system_message_descriptive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line)
+            # print("system_message_directional_hint:: ", system_message_directional_hint)
+            user_message = "I am completing the puzzle, give me a hint on what to do next."# Forget about the previous information the last hint was based on."
 
             # return "test"
             response, latency = callAzureLLM(user_message, system_message=system_message_descriptive_hint, max_tokens=50, past_messages=past_messages)

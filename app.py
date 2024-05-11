@@ -234,6 +234,8 @@ def check_puzzle_progress():
 def untailored_hint():
     """
     Route called by Unity to generate an untailored hint for the user based on their % progress in the puzzle.
+    Hint will recommend one random line-wide move from all possible steps done to solve the puzzle from scratch. 
+    Untailored hints do not have a specific user interaction to base the recommendation on, so randomness involved.
     
     Based on the calculated progress difference, the hint level is updated as follows:
     - If the user is stuck at the same progress level (stagnant or negative progress), the hint level is increased.
@@ -260,9 +262,8 @@ def untailored_hint():
         # Descriptive steps from solving the puzzle
         row_clues, column_clues = count_consecutive_cells(solutionCellStates)
         
-        # TODO: decide on how: idea make the solver complete the puzzle level and save every step per row/column (and form hints at random based on those infos), similar to recommend_next_linewide_move, but in original solver
+        # Recommend one line-wide move from all possible steps at random as untailored hints do not have a specific user interaction to base the recommendation on
         next_recommended_steps, no_next_steps, no_possible_combinations, line_index = recommend_one_of_all_linewide_moves(solutionGrid=solutionCellStates, row_clues=row_clues, column_clues=column_clues)
-        # check if on same level as before, then choose a hint at random out of the ones done by the solver, else if new level, run the solver to get all the hints
         line_index_clue = (line_index.split(" ")[0].lower() == "row") and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
         print("UNTAILORED line_index:: ", line_index, "line_index_clue:: ", line_index_clue)
         

@@ -33,6 +33,7 @@ class NonogramSolver:
         self.last_interactions = LAST_INTERACTIONS
         self.priority_lines = {}
         self.process_explained = []
+        self.total_linewide_steps = 0
         
         # tracking progress for benchmarking bot
         self.progress = 0
@@ -44,6 +45,7 @@ class NonogramSolver:
     def solve(self):
         """
         Method that solves the nonogram puzzle.
+        Keep track of the number of steps taken to solve the puzzle.
         """
         # step 1: Defining all possible solutions for every row and col (indepenedently of the other rows and cols)
         self.rows_possibilities = self.create_possibilities(self.ROWS_VALUES, self.no_of_cols)
@@ -81,11 +83,12 @@ class NonogramSolver:
                             if self.savepath != '':
                                 self.save_board()
                                 self.n += 1
+                    self.total_linewide_steps += 1                      # keep track of number of steps per all lines
                     self.update_done(row_ind, ind1)                 # update the rows_done or cols_done list when a row or column is completed
             self.check_solved()                                     # check if the puzzle is solved
         if self.solved: self.solution_grid = self.board.copy()      # set the solution grid to the board when the puzzle is solved
         
-    def recommend_next_action(self, no_next_steps = 1, whole_line=False):
+    def recommend_next_action(self, no_next_steps = 1, whole_line=False, random_line=False, random_linewide_step=None):
         """
         Method that recommends the next cell to fill in the nonogram puzzle based on the current grid progress state.
         The method also considers the last interactions with the grid to prioritize the rows and columns that were last interacted with. (including the rows and columns right next to the last interacted row or column)
@@ -94,6 +97,8 @@ class NonogramSolver:
         Set no_next_steps to 100 to get all the recommended next steps for 10x10 nonogram puzzle.
         
         Set whole_line to True to return the recommended next steps (definite cells) that were possible to be filled in that row or column (the no of steps will differ based on the number of definite cells in that row or column at the given moment)
+       
+        Set random_line to True to return a random linewide move (a random group of definite cells in a row or column). Which linewide move is returned is defined by the integer random_linewide_step.
         """
         next_recommended_steps = []
         self.process_explained = [] # reset the process explained
@@ -158,10 +163,12 @@ class NonogramSolver:
                                 self.process_explained.append(f">--- \tCell on row: {ri}, col: {ci} is a null cell with one possible value accross all combinations of the {'row' if row_ind else 'column'}, so update the cell with the value {val} ({'filled' if val == 1 else 'empty' }). Recommend the user to change the cell state!!!!!")
                                 # print(f'Recommended next cell is: row: {ri}, col: {ci}, val: {val} [0 indexed]')
                                 if no_next_steps > 0:
+                                    if random_linewide_step != None: 
+                                        if random_linewide_step > 0: continue
                                     next_recommended_steps.append((ri, ci, val))
-                                    if not whole_line: no_next_steps -= 1
+                                    if not whole_line and not random_line: no_next_steps -= 1
                                 
-                                if no_next_steps == 0 and not whole_line:
+                                if no_next_steps == 0 and not whole_line and not random_line:
                                     return next_recommended_steps, _, _
                                 
                             self.board[ri][ci] = val
@@ -174,6 +181,9 @@ class NonogramSolver:
                     line_index = ("Row ",ind1) if row_ind else ("Column ",ind1)
                     # print("Possible combinations of completions for the", line_index, ":", (values))
                     if whole_line and len(next_recommended_steps) != 0: return next_recommended_steps, len(values), line_index                      # do not return the next steps for a completed line (e.g. next_recommended_steps = [])
+                    if random_line and random_linewide_step != None:
+                        random_linewide_step -= 1
+                        if random_linewide_step <= 0 and len(next_recommended_steps) != 0: return next_recommended_steps, len(values), line_index   # return a random linewide move                                     
                     # A new row/column has been fully completed, so mark them as done
                     self.update_done(row_ind, ind1)
                     self.process_explained.append(f"-- \tUpdate that {'row' if row_ind else 'column' } {ind1} is completed with all cells.\n")
