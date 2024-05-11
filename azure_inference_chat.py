@@ -29,7 +29,8 @@ from grid_functions import (
     random_element, 
     describe_point_position, 
     count_consecutive_cells, 
-    decide_overall_area
+    decide_overall_area,
+    get_cell_group_size
 )
 from hf_inference import component_pipeline_query_hf
 from data_collection import csv_handler_progress
@@ -168,8 +169,8 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id,
         if completed:
             return "The puzzle is already completed. No further steps needed."
         else:
-            height = len(cellStates)
-            width = len(cellStates[0])
+            height = len(solutionCellStates)
+            width = len(solutionCellStates[0])
             
             # # 1. Get a natural language description of the locayions of the next recommended steps
             # locations_next_steps = [describe_point_position((step[0], step[1]), width, height) for step in next_recommended_steps]
@@ -178,17 +179,22 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id,
             # overall_area = decide_overall_area(locations_next_steps)
             # print("overall_area:: ", overall_area)
             # 1. Get line index for overall steps (either row or column)
-            print("line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with no_next_steps (definite cells):: ", no_next_steps)
+            print("line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with remaining no_next_steps (definite cells):: ", no_next_steps)
             # 2. Get the respective clues for the line index
             print("line_index_clue:: ", line_index_clue)
-            # 3. Generate a hint based on the area to focus on 
-            system_message_conclusive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue)
-            user_message = "Give me a hint on what to do next. Forget about the previous information the last hint was based on."
-            # system_message_conclusive_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
+            # 3. Get the group size that the next steps are part of (choose the first next step as representative); find the group size of the row or column in solution
+            row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
+            focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
+            print("focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
+            # 4. Generate a hint based on the area to focus on 
+            system_message_directional_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line)
+            # print("system_message_directional_hint:: ", system_message_directional_hint)
+            user_message = "I am completing the puzzle, give me a hint on what to do next."# Forget about the previous information the last hint was based on."
+            # system_message_directional_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
             # user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle. Forget about the previous location and overall area from previous hints."
             
             # return "test"
-            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=past_messages)
+            response, latency = callAzureLLM(user_message, system_message=system_message_directional_hint, max_tokens=70, past_messages=[])
             print("callLLM_directional_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
@@ -267,11 +273,11 @@ def callLLM_descriptive_hint(solutionCellStates, completed, hint_id, next_recomm
             # 2. Get the respective clues for the line index
             print("UNTAILORED line_index_clue:: ", line_index_clue)
             # 3. Generate a hint based on the area to focus on (SAME PROMPT AS DIRECTIONAL HINT)
-            system_message_conclusive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue)
+            system_message_descriptive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue)
             user_message = "Give me a hint on a possible good step take to complete the Nonogram. Forget about the previous information the last hint was based on."
 
             # return "test"
-            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=past_messages)
+            response, latency = callAzureLLM(user_message, system_message=system_message_descriptive_hint, max_tokens=50, past_messages=past_messages)
             print("UNTAILORED callLLM_descriptive_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"

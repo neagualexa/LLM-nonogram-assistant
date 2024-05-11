@@ -296,6 +296,10 @@ def get_cell_group_size(cell_states, row, column):
     """
     For a specific cell, find the size of the group of filled cells in the row and column it belongs to.
     """
+    # convert to 0-indexed
+    row -= 1
+    column -= 1
+    
     # Ensure dimensions
     if not (0 <= row < len(cell_states) and 0 <= column < len(cell_states[0])):
         raise IndexError("Row or column index is out of bounds.")
@@ -310,41 +314,33 @@ def find_group_size(cell_states, row, column, axis):
     """
     Calculate the size of the group of filled cells that the current cell belongs to.
     """
-    if not cell_states[row][column]:
+    if cell_states[row][column] in (0, '0'):
         return 0
 
-    current_group = 0
+    current_group = 1
     if axis == 'row':
-        # Check if current cell is contiguous with the left neighbor
-        if column > 0 and cell_states[row][column - 1]:
-            return find_group_size(cell_states, row, column - 1, axis='row')
+    # Traverse left and right until the group ends and 0s are encountered
+        col_copy_left = column
+        while col_copy_left >= 0 and cell_states[row][col_copy_left] not in (0, '0'):
+            current_group += 1
+            col_copy_left -= 1
+        col_copy_right = column + 1
+        while col_copy_right < len(cell_states[0]) and cell_states[row][col_copy_right] not in (0, '0'):
+            current_group += 1
+            col_copy_right += 1
         
-        # Traverse left and right
-        col_copy = column
-        while col_copy >= 0 and cell_states[row][col_copy]:
-            current_group += 1
-            col_copy -= 1
-        col_copy = column + 1
-        while col_copy < len(cell_states[0]) and cell_states[row][col_copy]:
-            current_group += 1
-            col_copy += 1
-
     elif axis == 'column':
-        # Check if current cell is contiguous with the upper neighbor
-        if row > 0 and cell_states[row - 1][column]:
-            return find_group_size(cell_states, row - 1, column, axis='column')
-        
         # Traverse up and down
-        row_copy = row
-        while row_copy >= 0 and cell_states[row_copy][column]:
+        row_copy_up = row
+        while row_copy_up >= 0 and cell_states[row_copy_up][column] not in (0, '0'):
             current_group += 1
-            row_copy -= 1
-        row_copy = row + 1
-        while row_copy < len(cell_states) and cell_states[row_copy][column]:
+            row_copy_up -= 1
+        row_copy_down = row + 1
+        while row_copy_down < len(cell_states) and cell_states[row_copy_down][column] not in (0, '0'):
             current_group += 1
-            row_copy += 1
+            row_copy_down += 1
 
-    # Remove the double-count of the initial cell
+    # Remove the double-count at end of loop
     return current_group - 1
 
 def zeroToOneIndexed(cells):

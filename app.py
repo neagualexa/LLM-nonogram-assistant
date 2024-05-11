@@ -184,8 +184,11 @@ def check_puzzle_progress():
                 line_index_clue = (line_index.split(" ")[0].lower() == "row") and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
                 print("line_index:: ", line_index, "line_index_clue:: ", line_index_clue)
             else:
-                next_recommended_steps, _ = recommend_next_steps(no_next_steps=5, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
-    
+                next_recommended_steps, _ = recommend_next_steps(no_next_steps=3, progressGrid=cellStates, solutionGrid=solutionCellStates, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+    elif completed:
+        next_recommended_steps = []
+        hint_level = 7
+        
     ##### Save the data to the CSV Progress database
     try:
         new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': "-", 'Hint_Response': "-", 'Observation_Response': "-", 'Positioning_Response': "-", 'Position_Description': "-", 'Overall_Latency': "-", 'Hint_Latency': "-", 'Observation_Latency': "-", 'Position_Latency': "-", 'Hint_Model': "-", 'Observation_Model': "-", 'Position_Model': "-", 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
