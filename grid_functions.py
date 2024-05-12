@@ -292,6 +292,30 @@ def count_consecutive_cells(grid):
 
     return row_counts, col_counts
 
+def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index):
+    """
+    Get a set of elements that show the group sizes that the steps in next_steps is part of.
+    """
+    group_sizes = []
+    for step in next_steps:
+        row_group_size, col_group_size = get_cell_group_size(solutionCellStates, step[0], step[1])
+        if "row" in line_index.lower():
+            if row_group_size not in group_sizes:
+                group_sizes.append((row_group_size,1))
+            else:
+                group_sizes[group_sizes.index(row_group_size)][1] += 1
+        else:
+            if col_group_size not in group_sizes:
+                group_sizes.append((col_group_size,1))
+            else:
+                group_sizes[group_sizes.index(col_group_size)][1] += 1
+    
+    string_group_sizes = f"On {line_index}, there are "       
+    for group in group_sizes:
+        string_group_sizes += (f"{group[1]} remaining definite squares in the group of {group[0]}; ")
+    
+    return string_group_sizes
+
 def get_cell_group_size(cell_states, row, column):
     """
     For a specific cell, find the size of the group of filled cells in the row and column it belongs to.

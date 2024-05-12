@@ -30,7 +30,8 @@ from grid_functions import (
     describe_point_position, 
     count_consecutive_cells, 
     decide_overall_area,
-    get_cell_group_size
+    get_cell_group_size,
+    get_unique_group_sizes_steps
 )
 from hf_inference import component_pipeline_query_hf
 from data_collection import csv_handler_progress
@@ -178,14 +179,22 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id,
             # # 2. Use the locations for each step and decide on overall area to focus on
             # overall_area = decide_overall_area(locations_next_steps)
             # print("overall_area:: ", overall_area)
+            
             # 1. Get line index for overall steps (either row or column)
             print("line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with remaining no_next_steps (definite cells):: ", no_next_steps)
+            
             # 2. Get the respective clues for the line index
             print("line_index_clue:: ", line_index_clue)
-            # 3. Get the group size that the next steps are part of (choose the first next step as representative); find the group size of the row or column in solution
-            row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
-            focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
-            print("focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
+           
+            # 3. Get the group size that the next steps are part of 
+            # Get the group size for all the next recommended steps, create a unique list of group sizes; find the group size of the row or column in solution
+            focus_group_line = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps, line_index)         # only focus on row or column group depending on line index
+            print("focus_group_line:: ", focus_group_line)
+            # (choose the first next step as representative)
+            # row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
+            # focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
+            # print("focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
+            
             # 4. Generate a hint based on the area to focus on 
             system_message_directional_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line)
             # print("system_message_directional_hint:: ", system_message_directional_hint)
@@ -270,12 +279,19 @@ def callLLM_descriptive_hint(solutionCellStates, completed, hint_id, next_recomm
             
             # 1. Get line index for overall steps (either row or column)
             print("UNTAILORED line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with no_next_steps (definite cells):: ", no_next_steps)
+            
             # 2. Get the respective clues for the line index
             print("UNTAILORED line_index_clue:: ", line_index_clue)
-            # 3. Get the group size that the next steps are part of (choose the first next step as representative); find the group size of the row or column in solution
-            row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
-            focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
-            print("UNTAILORED focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
+            
+            # 3. Get the group size that the next steps are part of 
+            # Get the group size for all the next recommended steps, create a unique list of group sizes; find the group size of the row or column in solution
+            focus_group_line = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps)         # only focus on row or column group depending on line index
+            print("focus_group_line:: ", focus_group_line)
+            # (choose the first next step as representative)
+            # row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
+            # focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
+            # print("UNTAILORED focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
+            
             # 4. Generate a hint based on the area to focus on 
             system_message_descriptive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line)
             # print("system_message_directional_hint:: ", system_message_directional_hint)
