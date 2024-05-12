@@ -159,14 +159,14 @@ def callLLM_general_hint(hint_id, past_messages=[]):
 ################ Function call for progress feedback : """Directional hint"""    HINT LEVEL : 1 ################
 ################
 
-def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location, past_messages=[]):
+def callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location=None, past_messages=[]):
     """
     Function to call the Azure LLM for progress feedback with a directional hint.
     The directional aspect depends on the next few best steps it is predicted for the user to take in order to solve the puzzle.
     Returns directional instructions to the user based on the next recommended steps (e.g. position in the grid, row number).
     """
     try:
-        print("Entering callLLM_directional_hint:: next_recommended_steps:: ", next_recommended_steps, " last_location:: ", last_location)
+        print("Entering callLLM_directional_hint:: next_recommended_steps:: ", next_recommended_steps)
         if completed:
             return "The puzzle is already completed. No further steps needed."
         else:
@@ -190,10 +190,6 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id,
             # Get the group size for all the next recommended steps, create a unique list of group sizes; find the group size of the row or column in solution
             focus_group_line = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps, line_index)         # only focus on row or column group depending on line index
             print("focus_group_line:: ", focus_group_line)
-            # (choose the first next step as representative)
-            # row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
-            # focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
-            # print("focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
             
             # 4. Generate a hint based on the area to focus on 
             system_message_directional_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line)
@@ -212,7 +208,7 @@ def callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id,
             
             try:
                 ############ Save CSV entry
-                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': line_index, 'Positioning_Response': last_location}
+                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': line_index}
                 csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
             except Exception as e:
                 print("Error in saving CSV entry:: ", e) 
@@ -241,7 +237,7 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
             system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
             user_message = "What is the next step to solve the puzzle?"
             
-            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=50, past_messages=[])
+            response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=60, past_messages=[])
             print("callLLM_conclusive_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
@@ -260,63 +256,6 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
     except Exception as e:
         print("callLLM_conclusive_hint:: The request failed with status code: " + str(e))
         return "Error in callLLM_conclusive_hint:: " + str(e)
-    
-################
-################ Function call for UNTAILORED feedback : """Descriptive hint"""    HINT LEVEL : 1 ################
-################
-
-def callLLM_descriptive_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, past_messages=[]):
-    """
-    Function to call the Azure LLM for untailored feedback with a level descriptive hint.
-    """
-    try:
-        print("Entering callLLM_descriptive_hint:: next_recommended_steps:: ", next_recommended_steps)
-        if completed:
-            return "The puzzle is already completed. No further steps needed."
-        else:
-            height = len(solutionCellStates)
-            width = len(solutionCellStates[0])
-            
-            # 1. Get line index for overall steps (either row or column)
-            print("UNTAILORED line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with no_next_steps (definite cells):: ", no_next_steps)
-            
-            # 2. Get the respective clues for the line index
-            print("UNTAILORED line_index_clue:: ", line_index_clue)
-            
-            # 3. Get the group size that the next steps are part of 
-            # Get the group size for all the next recommended steps, create a unique list of group sizes; find the group size of the row or column in solution
-            focus_group_line = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps)         # only focus on row or column group depending on line index
-            print("focus_group_line:: ", focus_group_line)
-            # (choose the first next step as representative)
-            # row_group_size, column_group_size = get_cell_group_size(solutionCellStates, next_recommended_steps[0][0], next_recommended_steps[0][1])
-            # focus_group_line = row_group_size if "row" in line_index.lower() else column_group_size         # only focus on row or column group depending on line index
-            # print("UNTAILORED focus_group_line:: ", focus_group_line, " row_group_size:: ", row_group_size, " column_group_size:: ", column_group_size)
-            
-            # 4. Generate a hint based on the area to focus on 
-            system_message_descriptive_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line)
-            # print("system_message_directional_hint:: ", system_message_directional_hint)
-            user_message = "I am completing the puzzle, give me a hint on what to do next."# Forget about the previous information the last hint was based on."
-
-            # return "test"
-            response, latency = callAzureLLM(user_message, system_message=system_message_descriptive_hint, max_tokens=50, past_messages=past_messages)
-            print("UNTAILORED callLLM_descriptive_hint:: response:: ", response)
-            
-            if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
-            response = response.split('\n')[0].strip()                          # remove ending whitespace
-            response = remove_after_last_punctuation(response)                  # remove unfinished sentences
-            
-            try:
-                ############ Save CSV entry
-                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': line_index}
-                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
-            except Exception as e:
-                print("UNTAILORED Error in saving CSV entry:: ", e) 
-            
-            return response
-        
-    except Exception as e:
-        print("callLLM_descriptive_hint:: The request failed with status code: " + str(e))
-        return "Error in callLLM_descriptive_hint:: " + str(e)
 
 ################
 ################ Function call for progress feedback : """Meaning hint"""    HINT LEVEL : 7 ################

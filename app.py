@@ -14,7 +14,6 @@ from azure_inference_chat import (
     callLLM_progress_checker,
     callLLM_general_hint,
     callLLM_directional_hint,
-    callLLM_descriptive_hint,
     callLLM_conclusive_hint,
     callLLM_meaning_hint
 )                
@@ -206,7 +205,7 @@ def check_puzzle_progress():
         response_llm = callLLM_general_hint(hint_id, messages_cache)
     elif hint_level == 1:
         """Directional hint"""
-        response_llm = callLLM_directional_hint(cellStates, solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location, messages_cache)
+        response_llm = callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location, messages_cache)
     elif hint_level == 2:
         "Conclusive hint"
         response_llm = callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, messages_cache)
@@ -249,6 +248,7 @@ def untailored_hint():
     """
     puzzle_progress = request.form.get('puzzleProgress')
     puzzle_progress = json.loads(puzzle_progress)
+    print("puzzle_progress:: ", puzzle_progress)
     solutionCellStates = puzzle_progress['solutionCellStates']
     solutionCellStates = ast.literal_eval(solutionCellStates)
     completed = True if puzzle_progress['completed'].lower() == "true" else False # convert to boolean
@@ -286,7 +286,7 @@ def untailored_hint():
     elif hint_level == 1:
         """Directional hint"""
         print("UNTAILORED Directional hint")
-        response_llm = callLLM_descriptive_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, messages_cache)
+        response_llm = callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, messages_cache)
     elif hint_level == 7:
         """Meaning hint"""
         print("UNTAILORED Meaning hint")

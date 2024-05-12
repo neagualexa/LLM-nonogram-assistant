@@ -95,7 +95,9 @@ A good strategy is to check if the clue number is greater than half of the empty
 
 The rows are of size {height} and the columns are of size {width}. You know that the next best line for the player to consider is {line_index}. This line has {no_possible_combinations} possible combinations for the groups of filled squares. The list of clues for this line is {clues}. {focus_group_size}
 
-Your task is to help the player complete the puzzle basing your hint on the information above. The user does not know about the definite squares, so your hint should not contain all the information above but ask the user to think about that information. Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '."""
+Your task is to help the player complete the puzzle basing your hint on the information above. The user does not know about the definite squares, so your hint should not contain all the information above but ask the user to think about that information. You can point out the number of remaining definite cells in some of the groups. 
+
+Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '."""
 # On this line there should be {no_next_steps} remaining definite squares that the user must still find. Some of the definite squares are in a filled group of size {focus_group_size}.
 
 ######### System Prompts CONCLUSIVE   HINT LEVEL 2 #########
