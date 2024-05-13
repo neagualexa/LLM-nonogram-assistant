@@ -384,9 +384,12 @@ def record_interactions():
     # Predict next best steps based on the last interactions
     row_clues, column_clues = count_consecutive_cells(solutionGrid)
     last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
-    next_recommended_steps, process_explained = recommend_next_steps(no_next_steps=5, progressGrid=progressGrid, solutionGrid=solutionGrid, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
+    next_recommended_steps, process_explained = recommend_next_steps(no_next_steps=1, progressGrid=progressGrid, solutionGrid=solutionGrid, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
     interaction_counter = get_interaction_id()
+    lastPressedCell_1 = zeroToOneIndexed(lastPressedCell_1)
+    lastPressedCell_2 = zeroToOneIndexed(lastPressedCell_2)
+    lastPressedCell_3 = zeroToOneIndexed(lastPressedCell_3)
     ##### Update ``Ground truth`` target cell on previous entry
     if interaction_counter > 1:
         try:
@@ -397,10 +400,9 @@ def record_interactions():
     ##### Save the data to the CSV Interaction database
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
     new_entry = {'id': interaction_counter, 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y', 'Predicted_row': 0, 'Predicted_col': 0}    
-    if recommend_next_steps != []:
-        if next_recommended_steps != []:
-            new_entry['Predicted_row'] = next_recommended_steps[0][0]
-            new_entry['Predicted_col'] = next_recommended_steps[0][1]
+    if next_recommended_steps != []:
+        new_entry['Predicted_row'] = next_recommended_steps[0][0]
+        new_entry['Predicted_col'] = next_recommended_steps[0][1]
     csv_handler_interaction.add_entry(new_entry)
     increment_interaction_counter()
     

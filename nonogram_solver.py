@@ -130,14 +130,14 @@ class NonogramSolver:
             # step 5.1.1: First sort the rows and cols by the lowest number of possibilities
             self.lowest = sorted(self.lowest_rows + self.lowest_cols, key=lambda element: element[1])
 
-            # if self.last_interactions != []:
-            #     # step 5.1.2: Get the priority rows and columns based on the last interactions with the grid (also consider the rows and columns right next to the last interacted row or column)
-            #     self.priority_lines = self.get_priority_lines(self.last_interactions)       # priority used to sort the rows and columns in custom_sort_priority
-            #     self.process_explained.append("- user interacted last with: " + str(self.last_interactions) + "\n")
-            #     # Step 5.1.3: Then re-sort the combined list (of rows and columns) by priority of interaction
-            #     self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
-            # else:
-            self.priority_lowest = self.lowest
+            if self.last_interactions != []:
+                # step 5.1.2: Get the priority rows and columns based on the last interactions with the grid (also consider the rows and columns right next to the last interacted row or column)
+                self.priority_lines = self.get_priority_lines(self.last_interactions)       # priority used to sort the rows and columns in custom_sort_priority
+                self.process_explained.append("- user interacted last with: " + str(self.last_interactions) + "\n")
+                # Step 5.1.3: Then re-sort the combined list (of rows and columns) by priority of interaction
+                self.priority_lowest = sorted(self.lowest, key=self.custom_sort_priority)
+            else:
+                self.priority_lowest = self.lowest
 
             # step 5.2: Get only zeroes or only ones of lowest possibility (rows or cols with least possibilities of combinations of completions)
             for ind1, _, row_ind in self.priority_lowest:
