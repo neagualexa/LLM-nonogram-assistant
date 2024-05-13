@@ -545,20 +545,22 @@ class NonogramSolver:
     def ask_for_recommendation(self, row_ind, prob_respect_recommendation=1):
         """
         For a given row or column, ask for the recommended next steps if the progress stagnates or gets worse.
-        TODO: not sure about the row_ind remove possibilities for the column or row
+        TODO: change to ask for whole-line recommendations with multiple next definite cells
+        TODO: add the hint generation request to pipeline (can only do for directional hints as all info used in hints, conclusive hints might not return specific error location and general hints cannot be simulated with this algorithm)
         """
         # if a mistake was made, get the recommended next steps
         bot_helper = NonogramSolver(ROWS_VALUES=self.ROWS_VALUES,COLS_VALUES=self.COLS_VALUES, PROGRESS_GRID=self.board, SOLUTION_GRID=self.solution_grid, LAST_INTERACTIONS=self.last_interactions)
         next_recommended_steps, _, _ = bot_helper.recommend_next_action(no_next_steps=1)
         print(f"next_recommended_steps: {next_recommended_steps}")
         if next_recommended_steps == []: self.solved = True
-        elif np.random.rand() < prob_respect_recommendation:
-            # if the recommendation is respected, update the board with the recommended next step
+        else:
             for step in next_recommended_steps:
-                ri, ci, val = step
-                self.board[ri][ci] = val
-                if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
-                else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
+                # if the recommendation is respected, update the board with the recommended next step
+                if np.random.rand() < prob_respect_recommendation:
+                    ri, ci, val = step
+                    self.board[ri][ci] = val
+                    if row_ind: self.cols_possibilities[ci] = self.remove_possibilities(self.cols_possibilities[ci], ri, val)
+                    else:       self.rows_possibilities[ri] = self.remove_possibilities(self.rows_possibilities[ri], ci, val)
       
       
             
