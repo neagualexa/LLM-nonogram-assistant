@@ -30,6 +30,8 @@ from grid_functions import (
     describe_point_position, 
     count_consecutive_cells, 
     decide_overall_area,
+    describe_point_position_on_line,
+    decide_overall_area_on_line,
     get_cell_group_size,
     get_unique_group_sizes_steps
 )
@@ -140,7 +142,7 @@ def callLLM_general_hint(hint_id, past_messages=[]):
         print("callLLM_general_hint:: response:: ", response)
         
         if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
-        response = response.split('\n')[0].strip()                          # remove ending whitespace
+        response = response.replace("\n", "").strip()                          # remove ending whitespace
         response = remove_after_last_punctuation(response)                  # remove unfinished sentences
         
         try:
@@ -173,37 +175,34 @@ def callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recomm
             height = len(solutionCellStates)
             width = len(solutionCellStates[0])
             
-            # # 1. Get a natural language description of the locayions of the next recommended steps
-            # locations_next_steps = [describe_point_position((step[0], step[1]), width, height) for step in next_recommended_steps]
-            # print("locations_next_steps:: ", locations_next_steps)
-            # # 2. Use the locations for each step and decide on overall area to focus on
-            # overall_area = decide_overall_area(locations_next_steps)
-            # print("overall_area:: ", overall_area)
-            
             # 1. Get line index for overall steps (either row or column)
             print("line_index:: ", line_index, " has no_possible_combinations:: ", no_possible_combinations, " with remaining no_next_steps (definite cells):: ", no_next_steps)
             
             # 2. Get the respective clues for the line index
             print("line_index_clue:: ", line_index_clue)
+            
+            # 3. Get overall area in the line of some or all definite cells
            
             # 3. Get the group size that the next steps are part of 
             # Get the group size for all the next recommended steps, create a unique list of group sizes; find the group size of the row or column in solution
-            focus_group_line = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps, line_index)         # only focus on row or column group depending on line index
+            # 4. Also get the locations of the focus group in the line
+            focus_group_line, overall_area = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps, line_index)         # only focus on row or column group depending on line index
             print("focus_group_line:: ", focus_group_line)
             
-            # 4. Generate a hint based on the area to focus on 
-            system_message_directional_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line)
+            # 5. Generate a hint based on the area to focus on 
+            system_message_directional_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line, overall_area)
             # print("system_message_directional_hint:: ", system_message_directional_hint)
-            user_message = "I am completing the puzzle, give me a hint on what to do next."# Forget about the previous information the last hint was based on."
+            user_message = "I am completing the puzzle, give me a hint on what to do next. If you have already given a hint about "+line_index+" with the clues "+str(line_index_clue)+", then that means I have not found all definite squares. Give me another hint with more information about it. Do not tell me about other rows or columns."
+            print("user_message:: ", user_message)
             # system_message_directional_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
             # user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle. Forget about the previous location and overall area from previous hints."
             
             # return "test"
-            response, latency = callAzureLLM(user_message, system_message=system_message_directional_hint, max_tokens=70, past_messages=[])
+            response, latency = callAzureLLM(user_message, system_message=system_message_directional_hint, max_tokens=80, past_messages=past_messages)
             print("callLLM_directional_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
-            response = response.split('\n')[0].strip()                          # remove ending whitespace
+            response = response.replace("\n", "").strip()                       # remove ending whitespace
             response = remove_after_last_punctuation(response)                  # remove unfinished sentences
             
             try:
@@ -241,7 +240,7 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
             print("callLLM_conclusive_hint:: response:: ", response)
             
             if "Hint:" in response: response = response.split("Hint:")[1]       # told in system prompt to start with "Hint:"
-            response = response.split('\n')[0].strip()                          # remove ending whitespace
+            response = response.replace("\n", "").strip()                          # remove ending whitespace
             response = remove_after_last_punctuation(response)                  # remove unfinished sentences
             
             try:

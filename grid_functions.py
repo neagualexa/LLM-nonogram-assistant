@@ -122,6 +122,78 @@ def generate_mistake_markers(differences):
         feedback_missing += f"Cell at row {diff[0]} and column {diff[1]} is not selected. \n"
     return feedback_wrong, feedback_missing
 
+def describe_point_position_on_line(position, width, height, line_index):
+    """
+    Method describes the position of a point in a row or column.
+    """
+    row, col = position
+    description = ""
+    half_width = width // 2
+    half_height = height // 2
+    even_rows = height % 2 == 0
+    even_cols = width % 2 == 0
+    index_offset_row = 0 if even_rows else 1
+    index_offset_col = 0 if even_cols else 1
+    
+    if "col" in line_index.lower():
+        if row < 1 or row > height:
+            return "Point is outside of the grid."
+        if row < half_height:
+            description += "towards the top of the column"
+        elif row > half_height+index_offset_row:
+            description += "towards the bottom of the column"
+        elif row == half_height or row == half_height+index_offset_row:
+            description += "in the middle of the column"
+            
+    elif "row" in line_index.lower():
+        if col < 1 or col > width:
+            return "Point is outside of the grid."
+        if col < half_width:
+            description += "towards the left of the row"
+        elif col > half_width+index_offset_col:
+            description += "towards the right of the row"
+        elif col == half_width or col == half_width+index_offset_col:
+            description += "in the middle of the row"
+    
+    return description
+
+def decide_overall_area_on_line(locations_next_steps, line_index, group_size):
+    """
+    Method looks at all the locations of the next steps and decides the overall area described by them.
+    If all the locations are in the same area, that area is prioritised.
+    Else return "some" in that area.
+    """
+    
+    overall_area = {
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "middle": 0
+    }
+    
+    line = "row" if "row" in line_index.lower() else "column"
+    
+    for location in locations_next_steps:
+        if "top" in location:
+            overall_area["top"] += 1
+        if "bottom" in location:
+            overall_area["bottom"] += 1
+        if "left" in location:
+            overall_area["left"] += 1
+        if "right" in location:
+            overall_area["right"] += 1
+        if "middle" in location:
+            overall_area["middle"] += 1
+    
+    sorted_areas = sorted(overall_area.items(), key=lambda x: x[1], reverse=True)
+    areas = [area for area, count in sorted_areas if count > 0]
+    # if all the areas are the same, return that area
+    if len(areas) == 1:
+        return "Let the player know that all definite cells from the group of " + str(group_size) +" should be towards the " + areas[0] + " of the " + line + "."
+    else:
+        return "Let the player know that some definite cells from the group of " + str(group_size) +" should be towards the " + areas[0] + " of the " + line + "."
+    
 def describe_point_position(position, width, height):
     """
     Method to describe the position of a point in a grid with the top left corner as the origin.
@@ -297,26 +369,44 @@ def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index):
     Get a set of elements that show the group sizes that the steps in next_steps is part of and their count per group.
     """
     group_sizes = []
+    locations_groups = ""
     for step in next_steps:
         row_group_size, col_group_size = get_cell_group_size(solutionCellStates, step[0], step[1])
         if "row" in line_index.lower():
             index = get_group_size_index(group_sizes, row_group_size)
             if index == None:
-                group_sizes.append([row_group_size,1])
+                group_sizes.append([row_group_size,1, [step]])
+            elif step[1] - 1 != group_sizes[-1][2][-1][1]:       # if not connected to the last step from the last group create a new group
+                group_sizes.append([row_group_size,1, [step]])
             else:
-                group_sizes[index][1] += 1
+                group_sizes[-1][1] += 1
+                group_sizes[-1][2].append(step)
         else:
             index = get_group_size_index(group_sizes, col_group_size)
             if index == None:
-                group_sizes.append([col_group_size,1])
+                group_sizes.append([col_group_size,1, [step]])
+            elif step[0] - 1 != group_sizes[-1][2][-1][0]:       # if not connected to the last step from the last group create a new group
+                group_sizes.append([col_group_size,1, [step]])
             else:
-                group_sizes[index][1] += 1
+                group_sizes[-1][1] += 1
+                group_sizes[-1][2].append(step)
+    # print("group_sizes:: ", group_sizes)
     
     string_group_sizes = f"On {line_index}, let the player know that there should be "       
     for group in group_sizes:
         string_group_sizes += (f"{group[1]} remaining definite squares in the group of {group[0]}; ")
     
-    return string_group_sizes
+    # for all the steps in a group size, get their locations
+    width = len(solutionCellStates[0])
+    height = len(solutionCellStates)
+    for group in group_sizes:
+        locations_next_steps = [describe_point_position_on_line((step[0], step[1]), width, height, line_index) for step in group[2]]
+        # print("locations_next_steps:: ", locations_next_steps)
+        overall_area = decide_overall_area_on_line(locations_next_steps, line_index, group[0])
+        print("overall_area:: ", overall_area)
+        locations_groups += overall_area + " "
+    
+    return string_group_sizes, locations_groups
 
 def get_group_size_index(group_sizes, line_group_size):
     for i, group_size in enumerate(group_sizes):
