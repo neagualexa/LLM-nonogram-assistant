@@ -233,8 +233,10 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
         if completed:
             return "The puzzle is already completed. No further steps needed."
         else:
+            # remove the values from the tuple as it confuses the LLM as the current value instead of supposed value
+            next_recommended_steps = [(step[0], step[1]) for step in next_recommended_steps]
             system_message_conclusive_hint = system_prompt_conclusive_hint(next_recommended_steps)
-            user_message = "What is the next step to solve the puzzle?"
+            user_message = "I am stuck and need help. Give me a hint on what to do next."
             
             response, latency = callAzureLLM(user_message, system_message=system_message_conclusive_hint, max_tokens=60, past_messages=[])
             print("callLLM_conclusive_hint:: response:: ", response)

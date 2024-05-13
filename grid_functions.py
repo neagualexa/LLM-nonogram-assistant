@@ -189,10 +189,13 @@ def decide_overall_area_on_line(locations_next_steps, line_index, group_size):
     sorted_areas = sorted(overall_area.items(), key=lambda x: x[1], reverse=True)
     areas = [area for area, count in sorted_areas if count > 0]
     # if all the areas are the same, return that area
-    if len(areas) == 1:
-        return "Let the player know that all definite cells from the group of " + str(group_size) +" should be towards the " + areas[0] + " of the " + line + "."
+    if group_size > 0:
+        if len(areas) == 1:
+            return "Let the player know that all definite cells from the group of " + str(group_size) +" should be towards the " + areas[0] + " of the " + line + "."
+        else:
+            return "Let the player know that some definite cells from the group of " + str(group_size) +" should be towards the " + areas[0] + " of the " + line + "."
     else:
-        return "Let the player know that some definite cells from the group of " + str(group_size) +" should be towards the " + areas[0] + " of the " + line + "."
+        return ""#"Let the player know that there are some wrongly filled squares towards the " + areas[0] + " of the " + line + "."
     
 def describe_point_position(position, width, height):
     """
@@ -394,7 +397,13 @@ def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index):
     
     string_group_sizes = f"On {line_index}, let the player know that there should be "       
     for group in group_sizes:
-        string_group_sizes += (f"{group[1]} remaining definite squares in the group of {group[0]}; ")
+        if group[0] != 0:
+            string_group_sizes += (f"{group[1]} remaining definite squares in the group of {group[0]}; ")
+    
+    string_group_sizes = f"On {line_index}, let the player know that there might be "           
+    for group in group_sizes:
+        if group[0] == 0:
+            string_group_sizes += (f"{group[1]} wrongly filled squares; ")
     
     # for all the steps in a group size, get their locations
     width = len(solutionCellStates[0])

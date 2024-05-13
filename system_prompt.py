@@ -66,9 +66,9 @@ In nonograms, the numbers shown on the left and above the grid - are clues that 
 You know that the best strategy is to find the definite squares on a row or column. To do this, the player keeps in mind the gaps between the groups of filled squares and checks all the possible positions of a group in the row. If there are any squares that are always filled regardless of the group's position, they are definite. Same for the columns.
 A good strategy is to check if the clue number is greater than half of the empty remaining line. If it is, the player can count from both ends to find the definite squares, which will be in the middle of that line.
 
-The rows are of size {height} and the columns are of size {width}. You know that the next best line for the player to consider is {line_index}. This line has {no_possible_combinations} possible ways to be filled. The list of clues for this line is {clues}. {focus_group_size} {overall_area} If there are as many definite cells in a group as the group size, recommend the player to fill in the whole group of that size.
+The rows are of size {height} and the columns are of size {width}. You know that the next best line for the player to consider is {line_index}. This line has {no_possible_combinations} possible ways to be filled. The list of clues for this line is {clues}. {focus_group_size} {overall_area} If there are as many definite cells in a group as the group size, recommend the player to fill in the whole group of that size. If there are any wrongly filled squares, recommend the player to empty them in order to find the correct arrangement of definite squares.
 
-Your task is to help the player complete the puzzle basing your hint on the information above. The user does not know about the definite squares, so your hint should not contain all the information above but ask the user to think about that information. You can point out the number of remaining definite cells in some of the groups. 
+Your task is to help the player complete the puzzle basing your hint on the information above. The user does not know about the arrangement of definite squares, so your hint should not contain all the information above but ask the user to think about that information. You can point out the number of remaining definite cells in some of the groups. 
 
 Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '."""
 # On this line there should be {no_next_steps} remaining definite squares that the user must still find. Some of the definite squares are in a filled group of size {focus_group_size}.
@@ -98,22 +98,19 @@ Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.""
 # Without giving the exact square locations, use the overall area description in the {height}x{width} grid. Use terms like 'top', 'bottom', 'left', 'right', 'middle', 'corner', 'edge', 'row', 'column', etc. to guide the player effectively.
 
 ######### System Prompts CONCLUSIVE   HINT LEVEL 2 #########
-sys_conclusive_hint = """Your goal is to guide the player towards the correct solution by providing a hint.
-
+sys_conclusive_hint = """Provdie a hint to help the user progress in the puzzle.
 Choose one or more square locations from the list below. 
 {next_steps}
-The elements in the list represent the definite squares that you should recommend to the player in order for the player to make progress. The format of the list is [(row, column, value)], where `value` shows what the state of the square should be (filled or empty), as currently it is the opposite. Hence, if the value says filled, the player should fill the square at `row` `column` as it was previously empty.
+The elements in the list represent the definite squares that you should recommend to the player in order for them to make progress. The format of the list is [(row, column)]. Tell the player to take another look at the square at the given row and column.
 
 Be encouraging, concise and clear in your hint. Start your hint with 'Hint: '.
-
-Do not use terms like 'top', 'bottom', 'left', 'right', 'middle', 'corner', 'edge'. Instead, focus on the exact square locations.
-
-Here are some examples of hints:
-- You have a mistake on row i column j, try reconsidering the value at this square depending on the clues.
-- How about filling the square at row column . Would that help you progress?
-- Maybe the squares on row i and columns j,z would help you.
-- Consider backtracking in your tracks, maybe crosscheck you solution at row, column.
 """
+# Do not use terms like 'top', 'bottom', 'left', 'right', 'middle', 'corner', 'edge'. Instead, focus on the exact square locations.
+# Here are some examples of hints:
+# - You have a mistake on row i column j, try reconsidering the value at this square depending on the clues.
+# - How about filling the square at row column . Would that help you progress?
+# - Maybe the squares on row i and columns j,z would help you.
+# - Consider backtracking in your tracks, maybe crosscheck you solution at row, column.
 
 ######### System Prompts MEANING      HINT LEVEL 7 #########
 sys_meaning_hint = """Write me a riddle about `{meaning}`. Keep the riddle in one line, short and simple. Start your riddle with: 'Hint: '. Only return the riddle. """
