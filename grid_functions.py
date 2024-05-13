@@ -312,7 +312,7 @@ def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index):
             else:
                 group_sizes[index][1] += 1
     
-    string_group_sizes = f"On {line_index}, there are "       
+    string_group_sizes = f"On {line_index}, let the player know that there should be "       
     for group in group_sizes:
         string_group_sizes += (f"{group[1]} remaining definite squares in the group of {group[0]}; ")
     
@@ -380,7 +380,7 @@ def zeroToOneIndexed(cells):
     Method to convert 0-indexed cells to 1-indexed cells
     """
     for i, cell in enumerate(cells):
-        if not cell:                                            # check if cell is empty
+        if cell == None:                                        # check if cell is empty
             continue
         if type(cell) == int or cell == 0:                      # check if cell is a number
             cells[i] = cell+1                                   # convert to 1-indexed

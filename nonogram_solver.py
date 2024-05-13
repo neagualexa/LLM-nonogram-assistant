@@ -325,6 +325,8 @@ class NonogramSolver:
     def custom_sort_priority(self, item):
         """
         Method that is used by `sorted()` as a `key` to sort the list of rows and columns by priority of interaction.
+        The sorting will first prioritize elements with the lowest number of possibilities. 
+        If there are multiple elements with the same number of possibilities, it will then prioritize based on the custom priority.
         
         (i, n, row_ind): tuple of integers (index, number of possibilities, row or column index boolean)
         """
@@ -339,7 +341,7 @@ class NonogramSolver:
         elif (not row_ind) and i in self.priority_lines["cols"]:
             priority = 1
             
-        return (priority, n)
+        return (n, priority) # order of priority: number of possibilities, priority
 
     def get_only_one_option(self, values):
         """
