@@ -208,7 +208,7 @@ def callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recomm
             
             try:
                 ############ Save CSV entry
-                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Position_Description': line_index}
+                new_entry_attributes = {'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model, 'Descriptive_Next_steps': focus_group_line}
                 csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
             except Exception as e:
                 print("Error in saving CSV entry:: ", e) 
@@ -246,7 +246,7 @@ def callLLM_conclusive_hint(completed, next_recommended_steps, hint_id, past_mes
             
             try:
                 ############ Save CSV entry
-                new_entry_attributes = {'Position': next_recommended_steps, 'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
+                new_entry_attributes = {'Hint_Response': response, 'Overall_Latency': latency, 'Hint_Latency': latency, 'Hint_Model': hint_model}
                 csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
             except Exception as e:
                 print("Error in saving CSV entry:: ", e) 
@@ -439,12 +439,12 @@ def callLLM_progress_checker(cellStates, solutionCellStates, completed, levelMea
             overall_latency = end_time - start_time
             print(f"Overall LLM pipeline Latency: {overall_latency} seconds")
             
-            try:
-                ############ Save CSV entry
-                new_entry_attributes = {'Position': random_position, 'Hint_Response': hint_response, 'Observation_Response': observation_response, 'Positioning_Response': positioning_response, 'Position_Description': position_description, 'Overall_Latency': overall_latency, 'Hint_Latency': hint_latency, 'Observation_Latency': observation_latency, 'Position_Latency': positioning_latency, 'Hint_Model': hint_model, 'Observation_Model': observation_model, 'Position_Model': position_model, 'Mistakes_per_Hint_Wrong': len(wrong_selections), 'Mistakes_per_Hint_Missing': len(missing_selections)}
-                csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
-            except Exception as e:
-                print("Error in saving CSV entry:: ", e)   
+            # try:
+            #     ############ Save CSV entry
+            #     new_entry_attributes = {'Position': random_position, 'Hint_Response': hint_response, 'Observation_Response': observation_response, 'Positioning_Response': positioning_response, 'Position_Description': position_description, 'Overall_Latency': overall_latency, 'Hint_Latency': hint_latency, 'Observation_Latency': observation_latency, 'Position_Latency': positioning_latency, 'Hint_Model': hint_model, 'Observation_Model': observation_model, 'Position_Model': position_model, 'Mistakes_per_Hint_Wrong': len(wrong_selections), 'Mistakes_per_Hint_Missing': len(missing_selections)}
+            #     csv_handler_progress.update_entry(hint_id, new_entry_attributes)     
+            # except Exception as e:
+            #     print("Error in saving CSV entry:: ", e)   
             
             return hint_response
             # system_message = system_message_hint  

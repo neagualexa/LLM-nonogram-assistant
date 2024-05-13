@@ -6,6 +6,7 @@ from datetime import datetime
 import requests
 import json
 import ast
+import time
 # from old.huggingface_inference import query as callLLM  # hugging face llms
 # from old.llm_local import callLLM                       # local gguf file llm
 # from old.azure_inference_http import callLLM            # azure llm but pure http requests
@@ -141,6 +142,8 @@ def check_puzzle_progress():
     7: meaning hints            (return a riddle about what the grid represents)
     
     """
+    start_time = time.time()
+    
     puzzle_progress = request.form.get('puzzleProgress')
     puzzle_progress = json.loads(puzzle_progress)
     cellStates = puzzle_progress['cellStates']
@@ -187,10 +190,18 @@ def check_puzzle_progress():
     elif completed:
         next_recommended_steps = []
         hint_level = 7
+    elif hint_level == 0 or hint_level == 7:
+        next_recommended_steps = []
         
     ##### Save the data to the CSV Progress database
     try:
-        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': "-", 'Hint_Response': "-", 'Observation_Response': "-", 'Positioning_Response': "-", 'Position_Description': "-", 'Overall_Latency': "-", 'Hint_Latency': "-", 'Observation_Latency': "-", 'Position_Latency': "-", 'Hint_Model': "-", 'Observation_Model': "-", 'Position_Model': "-", 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 
+                     'Hint_Response': "-", 'Next_Steps': next_recommended_steps, 'Descriptive_Next_steps': "-",
+                     'Overall_Latency': "-", 'Hint_Latency': "-", 'Hint_Model': "-", 
+                     'Progress': user_level_progress[username][level]["progress"][1], 
+                     'Previous_Progress': user_level_progress[username][level]["progress"][0], 
+                     'Hint_Session_Counter': user_level_progress[username][level]["hint_session_counter"], 
+                     'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
     except Exception as e:
         print("Error saving progress data:: ", e)
@@ -212,6 +223,13 @@ def check_puzzle_progress():
     elif hint_level == 7:
         """Meaning hint"""
         response_llm = callLLM_meaning_hint(completed, levelMeaning, hint_id, messages_cache)
+        
+    end_time = time.time()
+    overall_latency = end_time - start_time
+    try:
+        csv_handler_progress.update_entry(hint_id, {'Overall_Latency': overall_latency})
+    except Exception as e:
+        print("Error updating the overall latency for tailored:: ", e)
     ##### Request for the hint text to be verbalised (Text-to-Speech pipeline)
     try:
         url = 'http://localhost:5005/verbal_hint'
@@ -246,6 +264,8 @@ def untailored_hint():
     7: meaning hints            (return a riddle about what the grid represents)
     
     """
+    start_time = time.time()
+    
     puzzle_progress = request.form.get('puzzleProgress')
     puzzle_progress = json.loads(puzzle_progress)
     print("puzzle_progress:: ", puzzle_progress)
@@ -266,10 +286,18 @@ def untailored_hint():
         next_recommended_steps, no_next_steps, no_possible_combinations, line_index = recommend_one_of_all_linewide_moves(solutionGrid=solutionCellStates, row_clues=row_clues, column_clues=column_clues)
         line_index_clue = (line_index.split(" ")[0].lower() == "row") and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
         print("UNTAILORED line_index:: ", line_index, "line_index_clue:: ", line_index_clue)
+    elif hint_level == 0 or completed or hint_level == 7:
+        next_recommended_steps = []
         
     ##### Save the data to the CSV Progress database
     try:
-        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 'Position': "-", 'Hint_Response': "-", 'Observation_Response': "-", 'Positioning_Response': "-", 'Position_Description': "-", 'Overall_Latency': "-", 'Hint_Latency': "-", 'Observation_Latency': "-", 'Position_Latency': "-", 'Hint_Model': "-", 'Observation_Model': "-", 'Position_Model': "-", 'Mistakes_per_Hint_Wrong': 0, 'Mistakes_per_Hint_Missing': 0, 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 
+                     'Hint_Response': "-", 'Next_Steps': next_recommended_steps, 'Descriptive_Next_steps': "-",
+                     'Overall_Latency': "-", 'Hint_Latency': "-", 'Hint_Model': "-", 
+                     'Progress': "-", 
+                     'Previous_Progress': "-", 
+                     'Hint_Session_Counter': "-", 
+                     'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
     except Exception as e:
         print("UNTAILORED Error saving progress data:: ", e)
@@ -291,6 +319,13 @@ def untailored_hint():
         """Meaning hint"""
         print("UNTAILORED Meaning hint")
         response_llm = callLLM_meaning_hint(completed, levelMeaning, hint_id, messages_cache)
+    
+    end_time = time.time()
+    overall_latency = end_time - start_time
+    try:
+        csv_handler_progress.update_entry(hint_id, {'Overall_Latency': overall_latency})
+    except Exception as e:
+        print("Error updating the overall latency for tailored:: ", e)
     ##### Request for the hint text to be verbalised (Text-to-Speech pipeline)
     try:
         url = 'http://localhost:5005/verbal_hint'
@@ -387,9 +422,9 @@ def record_interactions():
     next_recommended_steps, process_explained = recommend_next_steps(no_next_steps=1, progressGrid=progressGrid, solutionGrid=solutionGrid, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
     interaction_counter = get_interaction_id()
-    lastPressedCell_1 = zeroToOneIndexed(lastPressedCell_1)
-    lastPressedCell_2 = zeroToOneIndexed(lastPressedCell_2)
-    lastPressedCell_3 = zeroToOneIndexed(lastPressedCell_3)
+    if lastPressedCell_1 != None: lastPressedCell_1 = zeroToOneIndexed(lastPressedCell_1)
+    if lastPressedCell_2 != None: lastPressedCell_2 = zeroToOneIndexed(lastPressedCell_2)
+    if lastPressedCell_3 != None: lastPressedCell_3 = zeroToOneIndexed(lastPressedCell_3)
     ##### Update ``Ground truth`` target cell on previous entry
     if interaction_counter > 1:
         try:

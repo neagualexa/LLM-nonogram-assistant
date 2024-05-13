@@ -74,7 +74,9 @@ class CSVHandler:
 
 # Initializes the CSV database files
 def initialize_csv_database():
-    fieldnames_progress = ['id', 'Hint_Level', 'User', 'Level', 'Position', 'Hint_Response', 'Observation_Response', 'Positioning_Response', 'Position_Description', 'Overall_Latency', 'Hint_Latency', 'Observation_Latency', 'Position_Latency', 'Hint_Model', 'Observation_Model', 'Position_Model',  'Mistakes_per_Hint_Wrong', 'Mistakes_per_Hint_Missing', 'Timestamp']
+    # old approach fieldnames
+    # fieldnames_progress = ['id', 'Hint_Level', 'User', 'Level', 'Position', 'Hint_Response', 'Observation_Response', 'Positioning_Response', 'Position_Description', 'Overall_Latency', 'Hint_Latency', 'Observation_Latency', 'Position_Latency', 'Hint_Model', 'Observation_Model', 'Position_Model',  'Mistakes_per_Hint_Wrong', 'Mistakes_per_Hint_Missing', 'Timestamp']
+    fieldnames_progress = ['id', 'User', 'Level', 'Hint_Level', 'Hint_Response', 'Next_Steps', 'Descriptive_Next_steps', 'Overall_Latency', 'Hint_Latency', 'Hint_Model', 'Progress', 'Previous_Progress', 'Hint_Session_Counter', 'Timestamp']
     csv_handler_progress = CSVHandler('data/data_progress.csv', fieldnames_progress)
     csv_handler_progress.initialize_file()
     
