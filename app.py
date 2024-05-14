@@ -22,7 +22,7 @@ from azure_inference_chat import (
 # from old.llm_chain_memory import callLLM                  # azure llm with langchain and llm chain memory (memory lost at every app restart)
 from hf_inference import meaning_checker_hf                 # HF llm checking validity of user meaning
 from data_collection import csv_handler_progress, csv_handler_meaning, csv_handler_game, csv_handler_interaction
-from grid_functions import count_consecutive_cells, zeroToOneIndexed
+from grid_functions import count_consecutive_cells, zeroToOneIndexed, compare_grids, random_element
 from progress_tracking import (
     recommend_next_steps,
     recommend_next_linewide_move,
@@ -269,6 +269,8 @@ def untailored_hint():
     puzzle_progress = request.form.get('puzzleProgress')
     puzzle_progress = json.loads(puzzle_progress)
     print("puzzle_progress:: ", puzzle_progress)
+    cellStates = puzzle_progress['cellStates']
+    cellStates = ast.literal_eval(cellStates)
     solutionCellStates = puzzle_progress['solutionCellStates']
     solutionCellStates = ast.literal_eval(solutionCellStates)
     completed = True if puzzle_progress['completed'].lower() == "true" else False # convert to boolean
@@ -276,7 +278,12 @@ def untailored_hint():
     username = puzzle_progress['username']
     level = puzzle_progress['level']
     hint_id = "untailored_"+puzzle_progress['hint_id'] + "_" + level
-    hint_level = int(puzzle_progress['hint_level'])
+    # hint_level = int(puzzle_progress['hint_level'])
+    ##### Track the hint level per user per level
+    track_hint_level(username=username, level=level, progressGrid=cellStates, solutionGrid=solutionCellStates, hint_id=hint_id)
+    print("user_level_progress:: ", user_level_progress)
+    hint_level = user_level_progress[username][level]["hint_level"]
+    # hint_level = 2 # for testing
     
     if hint_level == 1 and not completed:
         # Descriptive steps from solving the puzzle
@@ -286,6 +293,11 @@ def untailored_hint():
         next_recommended_steps, no_next_steps, no_possible_combinations, line_index = recommend_one_of_all_linewide_moves(solutionGrid=solutionCellStates, row_clues=row_clues, column_clues=column_clues)
         line_index_clue = (line_index.split(" ")[0].lower() == "row") and row_clues[int(line_index.split(" ")[1])-1] or column_clues[int(line_index.split(" ")[1])-1]
         print("UNTAILORED line_index:: ", line_index, "line_index_clue:: ", line_index_clue)
+    if hint_level == 2:
+        # Conclusive hint pointing out mistakes
+        mistake_found = compare_grids(cellStates, solutionCellStates)
+        random_found_mistake = [random_element(mistake_found["wrong_selection"], mistake_found["missing_selection"])]
+        next_recommended_steps = random_found_mistake
     elif hint_level == 0 or completed or hint_level == 7:
         next_recommended_steps = []
         
@@ -314,7 +326,11 @@ def untailored_hint():
     elif hint_level == 1:
         """Directional hint"""
         print("UNTAILORED Directional hint")
-        response_llm = callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, messages_cache)
+        response_llm = callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, messages_cache, untailored=True)
+    elif hint_level == 2:
+        """Conclusive hint"""
+        print("UNTAILORED Conclusive hint")
+        response_llm = callLLM_conclusive_hint(completed, random_found_mistake, hint_id, messages_cache)
     elif hint_level == 7:
         """Meaning hint"""
         print("UNTAILORED Meaning hint")

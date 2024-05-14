@@ -367,7 +367,7 @@ def count_consecutive_cells(grid):
 
     return row_counts, col_counts
 
-def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index):
+def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index, untailored=False):
     """
     Get a set of elements that show the group sizes that the steps in next_steps is part of and their count per group.
     """
@@ -395,15 +395,18 @@ def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index):
                 group_sizes[-1][2].append(step)
     # print("group_sizes:: ", group_sizes)
     
-    string_group_sizes = f"On {line_index}, let the player know that there should be "       
-    for group in group_sizes:
-        if group[0] != 0:
-            string_group_sizes += (f"{group[1]} remaining definite squares in the group of {group[0]}; ")
-    
-    string_group_sizes = f"On {line_index}, let the player know that there might be "           
-    for group in group_sizes:
-        if group[0] == 0:
-            string_group_sizes += (f"{group[1]} wrongly filled squares; ")
+    if not untailored:
+        string_group_sizes = f"On {line_index}, let the player know that there should be "       
+        for group in group_sizes:
+            if group[0] != 0:
+                string_group_sizes += (f"{group[1]} remaining definite squares in the group of {group[0]}; ")
+        
+        string_group_sizes = f"On {line_index}, let the player know that there might be "           
+        for group in group_sizes:
+            if group[0] == 0:
+                string_group_sizes += (f"{group[1]} wrongly filled squares; ")
+    else:
+        string_group_sizes = ""
     
     # for all the steps in a group size, get their locations
     width = len(solutionCellStates[0])
@@ -412,7 +415,6 @@ def get_unique_group_sizes_steps(solutionCellStates, next_steps, line_index):
         locations_next_steps = [describe_point_position_on_line((step[0], step[1]), width, height, line_index) for step in group[2]]
         # print("locations_next_steps:: ", locations_next_steps)
         overall_area = decide_overall_area_on_line(locations_next_steps, line_index, group[0])
-        print("overall_area:: ", overall_area)
         locations_groups += overall_area + " "
     
     return string_group_sizes, locations_groups

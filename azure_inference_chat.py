@@ -161,7 +161,7 @@ def callLLM_general_hint(hint_id, past_messages=[]):
 ################ Function call for progress feedback : """Directional hint"""    HINT LEVEL : 1 ################
 ################
 
-def callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location=None, past_messages=[]):
+def callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recommended_steps, no_next_steps, no_possible_combinations, line_index, line_index_clue, last_location=None, past_messages=[], untailored=False):
     """
     Function to call the Azure LLM for progress feedback with a directional hint.
     The directional aspect depends on the next few best steps it is predicted for the user to take in order to solve the puzzle.
@@ -186,13 +186,13 @@ def callLLM_directional_hint(solutionCellStates, completed, hint_id, next_recomm
             # 3. Get the group size that the next steps are part of 
             # Get the group size for all the next recommended steps, create a unique list of group sizes; find the group size of the row or column in solution
             # 4. Also get the locations of the focus group in the line
-            focus_group_line, overall_area = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps, line_index)         # only focus on row or column group depending on line index
-            print("focus_group_line:: ", focus_group_line)
+            focus_group_line, overall_area = get_unique_group_sizes_steps(solutionCellStates, next_recommended_steps, line_index, untailored=untailored)         # only focus on row or column group depending on line index
+            print("focus_group_line:: ", focus_group_line, "\noverall_area:: ", overall_area)
             
             # 5. Generate a hint based on the area to focus on 
             system_message_directional_hint = system_prompt_directional_hint_2(height, width, line_index, no_possible_combinations, no_next_steps, line_index_clue, focus_group_line, overall_area)
             # print("system_message_directional_hint:: ", system_message_directional_hint)
-            user_message = "I am completing the puzzle, give me a hint on what to do next. If you have already given a hint about "+line_index+" with the clues "+str(line_index_clue)+", then that means I have not found all definite squares. Give me another hint with more information about it. Do not tell me about other rows or columns."
+            user_message = "I am stuck when solving the puzzle, give me a hint on what to do next. If you have already given a hint about "+line_index+" with the clues "+str(line_index_clue)+", then that means I have not found all definite squares. Give me another hint with more information about it. Do not tell me about other rows or columns."
             print("user_message:: ", user_message)
             # system_message_directional_hint = system_prompt_directional_hint(next_recommended_steps, height, width, overall_area, last_location)
             # user_message = "Guide me to the area or rows or columns that I need to focus on next to complete the puzzle. Forget about the previous location and overall area from previous hints."
