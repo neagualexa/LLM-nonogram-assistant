@@ -84,12 +84,12 @@ def initialize_csv_database():
     csv_handler_meaning = CSVHandler('data/data_meaning.csv', fieldnames_meaning)
     csv_handler_meaning.initialize_file()
     
-    fieldnames_game = ['id', 'User', 'Level', 'Completed', 'onTime', 'Duration', 'Meaning_Completed', 'Nb_Hints_Used', 'Timestamp']
+    fieldnames_game = ['id', 'User', 'Level', 'Completed', 'Progress', 'onTime', 'Duration', 'Meaning_Completed', 'Nb_Hints_Used', 'Timestamp']
     csv_handler_game = CSVHandler('data/data_game.csv', fieldnames_game)
     csv_handler_game.initialize_file()
     
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
-    fieldnames_interaction = ['id', 'User', 'Level', 'Cell_1', 'Cell_2', 'Cell_3', 'Grid', 'Progress_Grid', 'Target_row', 'Target_col', 'Predicted_row', 'Predicted_col']
+    fieldnames_interaction = ['id', 'User', 'Level', 'Cell_1', 'Cell_2', 'Cell_3', 'Grid', 'Progress_Grid', 'Target_row', 'Target_col', 'Predicted_row', 'Predicted_col', 'Progress', 'Timestamp']
     csv_handler_interaction = CSVHandler('data/data_interaction.csv', fieldnames_interaction)
     csv_handler_interaction.initialize_file()
     

@@ -27,6 +27,9 @@ from progress_tracking import (
     recommend_next_steps,
     recommend_next_linewide_move,
     recommend_one_of_all_linewide_moves,
+    calculate_progress,
+    track_user_level_progress,
+    hint_level_duration,
     track_hint_level,
     user_level_progress,
     get_interaction_id, 
@@ -405,7 +408,13 @@ def save_game():
     levels_data = userGameData['levels_data']
     for i in range(len(levels_data)):
         level_data = levels_data[str(i)]
-        new_entry = {'id': len(csv_handler_game.read_entries()), 'User': userGameData['username'], 'Level': level_data['level'], 'Completed': level_data['level_completed'], 'onTime': level_data['on_time'], 'Duration': level_data['time'], 'Meaning_Completed': level_data['meaning_completed'], 'Nb_Hints_Used': level_data['nb_hints_used'], 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        progress = user_level_progress[userGameData['username']][level_data['level']]["progress"][1]
+        new_entry = {'id': len(csv_handler_game.read_entries()), 'User': userGameData['username'], 'Level': level_data['level'], 
+                     'Completed': level_data['level_completed'], 'Progress': progress,
+                     'onTime': level_data['on_time'], 'Duration': level_data['time'], 
+                     'Meaning_Completed': level_data['meaning_completed'], 
+                     'Nb_Hints_Used': level_data['nb_hints_used'], 
+                     'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         print("new_entry:: ", new_entry)
         csv_handler_game.add_entry(new_entry)
         
@@ -437,6 +446,11 @@ def record_interactions():
     last_interactions = [lastPressedCell_1, lastPressedCell_2, lastPressedCell_3]
     next_recommended_steps, process_explained = recommend_next_steps(no_next_steps=1, progressGrid=progressGrid, solutionGrid=solutionGrid, last_interactions=last_interactions, row_clues=row_clues, column_clues=column_clues)
     
+    # track progress 
+    progress = calculate_progress(progressGrid=progressGrid, solutionGrid=solutionGrid)
+    track_user_level_progress(username, level, progress, hint_level_duration)
+    print("interaction:: user_level_progress:: ", user_level_progress)
+    
     interaction_counter = get_interaction_id()
     if lastPressedCell_1 != None: lastPressedCell_1 = zeroToOneIndexed(lastPressedCell_1)
     if lastPressedCell_2 != None: lastPressedCell_2 = zeroToOneIndexed(lastPressedCell_2)
@@ -450,7 +464,12 @@ def record_interactions():
     
     ##### Save the data to the CSV Interaction database
     # each Cell_i is a list of  (Row, Column, Row Group Size, Column Group Size)
-    new_entry = {'id': interaction_counter, 'User': username, 'Level': level, 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 'Target_row': 'x', 'Target_col': 'y', 'Predicted_row': 0, 'Predicted_col': 0}    
+    new_entry = {'id': interaction_counter, 'User': username, 'Level': level, 
+                 'Cell_1': lastPressedCell_1, 'Cell_2': lastPressedCell_2, 'Cell_3': lastPressedCell_3, 
+                 'Grid': solutionGrid, 'Progress_Grid': progressGrid, 
+                 'Target_row': 'x', 'Target_col': 'y', 'Predicted_row': 0, 'Predicted_col': 0, 
+                 'Progress': progress, 
+                 'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}    
     if next_recommended_steps != []:
         new_entry['Predicted_row'] = next_recommended_steps[0][0]
         new_entry['Predicted_col'] = next_recommended_steps[0][1]
