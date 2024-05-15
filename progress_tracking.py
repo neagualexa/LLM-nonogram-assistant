@@ -4,7 +4,7 @@ import random
 
 user_level_progress = {}
 interaction_counter = 0
-levels_order = ["heart", "car", "toucan", "mouse", "snail", "invertedcar"]
+levels_order = ["heart", "car", "snail", "mouse", "rooster", "invertedcar"]
 hint_level_duration = 1
 
 def track_hint_level(username, level, progressGrid, solutionGrid, hint_id):
