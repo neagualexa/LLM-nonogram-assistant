@@ -309,9 +309,9 @@ def untailored_hint():
         new_entry = {'id': hint_id, 'Hint_Level': hint_level, 'User': username, 'Level': level, 
                      'Hint_Response': "-", 'Next_Steps': next_recommended_steps, 'Descriptive_Next_steps': "-",
                      'Overall_Latency': "-", 'Hint_Latency': "-", 'Hint_Model': "-", 
-                     'Progress': "-", 
-                     'Previous_Progress': "-", 
-                     'Hint_Session_Counter': "-", 
+                     'Progress': user_level_progress[username][level]["progress"][1], 
+                     'Previous_Progress': user_level_progress[username][level]["progress"][0], 
+                     'Hint_Session_Counter': user_level_progress[username][level]["hint_session_counter"],  
                      'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         csv_handler_progress.add_entry(new_entry)
     except Exception as e:
