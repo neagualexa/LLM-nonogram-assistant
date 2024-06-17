@@ -39,6 +39,7 @@ staticfiles/
 models/
 models/*
 azure/LLM_calls/
+azure/
 speech_pipeline/azure/azurecredentials.py
 
 # run files
@@ -56,4 +57,4 @@ verbal_hints/
 # User Data 
 data/
 
-old/
+old_nogit/
