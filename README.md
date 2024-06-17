@@ -4,7 +4,7 @@ This repository contains the resourses to set up the AI assistant that helps the
 This is a Flask application that serves as a chatroom with AI-featured puzzle checking and hinting functionalities.
 Under `speech_pipeline`, a Text-to-Speech server can be run to allow for the AI to verbalise its hints and help.
 
-This is one of the repos for the Final Year Project of [Alexandra Neagu (@neagualexa)](https://github.com/neagualexa) titled `XXX` at Imperial College London.
+This is one of the repos for the Final Year Project of [Alexandra Neagu (@neagualexa)](https://github.com/neagualexa) titled `Enhancing Puzzle-Solving with User-Tailored AI Assistance: A Study on Nonogram Learning Outcomes` at Imperial College London.
 
 The repository containing the Nonogram Game Interface developed in `Unity`, is found at [NonogramUnity](https://github.com/neagualexa/NonogramUnity).
 
