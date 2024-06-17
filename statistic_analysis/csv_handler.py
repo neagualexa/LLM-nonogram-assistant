@@ -58,7 +58,7 @@ def reshape_durations(folder_path):
     game_df['puzzle_duration'] = game_df['Duration'] - game_df['meaning_duration']
     
     # If Completed == false then puzzle_duration = Duration
-    # TODO: add or game_df['Progress'] != 1.0) cause could be that the complete flag has not updated but the progress is 1.0 (to check idk)
+    # add or game_df['Progress'] != 1.0) cause could be that the complete flag has not updated but the progress is 1.0 (to check idk)
     game_df['puzzle_duration'] = np.where(game_df['Completed'] == False, game_df['Duration'], game_df['puzzle_duration'])
     game_df['meaning_duration'] = np.where(game_df['Completed'] == False, 
                                             np.where(game_df['Meaning_Completed'] == False, 

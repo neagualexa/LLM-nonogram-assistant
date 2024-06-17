@@ -11,7 +11,6 @@ def get_audio_from_text(text, file_path):
 
 ###### TEXT to SPEECH with Coqui.ai TTS
 """ https://github.com/coqui-ai/TTS/tree/dev#installation """
-# TODO: try this out
 
 
 ###### TEXT to SPEECH with HUGGINGFACE MODELS

@@ -7,6 +7,11 @@ import os
 import tkinter as tk
 from tkinter import Listbox, Button, SINGLE, END, Toplevel
 
+"""
+This script is used to visualize the progress grids of participants in the nonogram experiment.
+It uses tkinter to create a GUI that allows the user to select a participant and level, and then navigate through every interactions made within a level.
+"""
+
 # Function to load grids from a dictionary of dataframes
 def load_grids_from_file(data):
     grids = {}
@@ -53,7 +58,7 @@ def read_hint_data(folder_path):
         for level in levels.unique():
             if level not in hint_data:
                 hint_data[participant_id][level] = pd.DataFrame()
-            hint_data[participant_id][level] = df[df['Level'] == level] #TODO: add filter to remove meaning hints
+            hint_data[participant_id][level] = df[df['Level'] == level]
             print(participant_id, level, len(df[df['Level'] == level]))
     
     return hint_data

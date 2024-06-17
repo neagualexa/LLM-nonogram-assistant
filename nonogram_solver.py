@@ -547,6 +547,7 @@ class NonogramSolver:
     def ask_for_recommendation(self, row_ind, prob_respect_recommendation=1):
         """
         For a given row or column, ask for the recommended next steps if the progress stagnates or gets worse.
+        Future work for the simulation benchmark:
         TODO: change to ask for whole-line recommendations with multiple next definite cells
         TODO: add the hint generation request to pipeline (can only do for directional hints as all info used in hints, conclusive hints might not return specific error location and general hints cannot be simulated with this algorithm)
         """
